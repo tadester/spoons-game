@@ -17,10 +17,6 @@ public class Game {
         this.gameOver = false;
     }
 
-    public void start() {
-        // Game logic for starting the game
-    }
-
     public Deck getDeck() {
         return deck;
     }
