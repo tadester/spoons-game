@@ -4,6 +4,7 @@ import game.cards.Card;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Player {
     private final String name;
@@ -25,41 +26,39 @@ public class Player {
     }
 
     public void addCard(Card card) {
-        if (hand.size() < 4) {
-            hand.add(card);
-        }
-    }
-
-    public void removeCard(Card card) {
-        hand.remove(card);
+        hand.add(card);
     }
 
     public boolean checkForMatch() {
         if (hand.size() < 4) return false;
-        for (int i = 0; i < hand.size() - 3; i++) {
-            if (hand.get(i).getSuit().equals(hand.get(i + 1).getSuit())
-                && hand.get(i).getSuit().equals(hand.get(i + 2).getSuit())
-                && hand.get(i).getSuit().equals(hand.get(i + 3).getSuit())) {
-                return true;
+        String suit = hand.get(0).getSuit();
+        for (Card card : hand) {
+            if (!card.getSuit().equals(suit)) {
+                return false;
             }
         }
-        return false;
+        return true;
+    }
+
+    public void grabSpoon() {
+        hasSpoon = true;
     }
 
     public boolean hasSpoon() {
         return hasSpoon;
     }
 
-    public void grabSpoon() {
-        this.hasSpoon = true;
-    }
-
     public void resetSpoon() {
-        this.hasSpoon = false;
+        hasSpoon = false;
     }
 
-    @Override
-    public String toString() {
-        return name + "'s hand: " + hand.toString();
+    public void resetHand() {
+        hand.clear();
+    }
+
+    public void replaceCard(int index) {
+        if (index >= 0 && index < hand.size()) {
+            hand.remove(index);
+        }
     }
 }

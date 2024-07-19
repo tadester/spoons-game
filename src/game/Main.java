@@ -9,10 +9,8 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        MenuUI menuUI = new MenuUI();
-        Scene scene = new Scene(menuUI.createContent(), 800, 600);
-
-        primaryStage.setScene(scene);
+        MenuUI menuUI = new MenuUI(primaryStage);
+        primaryStage.setScene(new Scene(menuUI.createContent(), 800, 600));
         primaryStage.setTitle("Spoons Game");
         primaryStage.show();
     }

@@ -5,22 +5,22 @@ import java.util.Collections;
 import java.util.List;
 
 public class Deck {
-    private final List<Card> cards;
+    private List<Card> cards;
 
     public Deck() {
-        cards = new ArrayList<>();
-        String[] suits = {"Hearts", "Diamonds", "Clubs", "Spades"};
-        String[] values = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
+        reset();
+    }
 
+    public void reset() {
+        cards = new ArrayList<>();
+        String[] suits = {"hearts", "diamonds", "clubs", "spades"};
+        String[] values = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"};
+        
         for (String suit : suits) {
             for (String value : values) {
                 cards.add(new Card(suit, value));
             }
         }
-        shuffle();
-    }
-
-    public void shuffle() {
         Collections.shuffle(cards);
     }
 
