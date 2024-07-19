@@ -16,17 +16,24 @@ public class SettingsUI {
         root.setAlignment(Pos.CENTER);
 
         ComboBox<String> speedComboBox = new ComboBox<>();
-        speedComboBox.getItems().addAll("1 card/second", "2 cards/second", "5 cards/second");
-        speedComboBox.setValue("1 card/second");
+        speedComboBox.getItems().addAll("1 second", "2 seconds", "3 seconds", "4 seconds", "5 seconds", "6 seconds", "7 seconds", "8 seconds", "9 seconds", "10 seconds");
+        speedComboBox.setValue("5 seconds");
 
         Button saveButton = new Button("Save");
         saveButton.setOnAction(e -> {
             String selectedSpeed = speedComboBox.getValue();
-            int speed = 1000; // Default to 1 card per second
-            if (selectedSpeed.equals("2 cards/second")) {
-                speed = 500;
-            } else if (selectedSpeed.equals("5 cards/second")) {
-                speed = 200;
+            int speed = 5000; // Default to 5 seconds
+            switch (selectedSpeed) {
+                case "1 second": speed = 1000; break;
+                case "2 seconds": speed = 2000; break;
+                case "3 seconds": speed = 3000; break;
+                case "4 seconds": speed = 4000; break;
+                case "5 seconds": speed = 5000; break;
+                case "6 seconds": speed = 6000; break;
+                case "7 seconds": speed = 7000; break;
+                case "8 seconds": speed = 8000; break;
+                case "9 seconds": speed = 9000; break;
+                case "10 seconds": speed = 10000; break;
             }
             if (game != null) {
                 game.setGameSpeed(speed);

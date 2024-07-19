@@ -21,7 +21,7 @@ public class Card {
 
     @Override
     public String toString() {
-        return value + "_of_" + suit.toLowerCase();
+        return value.toLowerCase() + "_of_" + suit.toLowerCase();
     }
 
     @Override

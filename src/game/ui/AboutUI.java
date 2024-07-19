@@ -10,7 +10,7 @@ public class AboutUI {
         VBox root = new VBox(10);
         root.setAlignment(Pos.CENTER);
 
-        Label aboutLabel = new Label("Spoons Game\nDeveloped by Olatade Obasan \nVersion 1.0");
+        Label aboutLabel = new Label("Spoons Game\nDeveloped by [Your Name]\nVersion 1.0");
 
         root.getChildren().add(aboutLabel);
         return root;
