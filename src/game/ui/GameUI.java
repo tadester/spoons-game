@@ -4,12 +4,11 @@ import game.Game;
 import game.cards.Card;
 import game.players.Player;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.stage.Stage;
+import javafx.application.Platform;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,9 +17,11 @@ public class GameUI {
 
     private Game game;
     private List<Label> playerLabels;
-    private List<ImageView> playerCards;
+    private List<HBox> playerHands;
+    private List<ImageView> playerSpoons;
     private VBox root;
     private Player currentPlayer;
+    private Card selectedCard = null;
 
     public GameUI() {
         setupGame();
@@ -30,24 +31,33 @@ public class GameUI {
         root = new VBox(10);
         root.setAlignment(Pos.CENTER);
 
-        HBox playerBox = new HBox(10);
-        playerBox.setAlignment(Pos.CENTER);
+        HBox playersBox = new HBox(20);
+        playersBox.setAlignment(Pos.CENTER);
         playerLabels = new ArrayList<>();
-        playerCards = new ArrayList<>();
+        playerHands = new ArrayList<>();
+        playerSpoons = new ArrayList<>();
 
         for (Player player : game.getPlayers()) {
+            VBox playerBox = new VBox(5);
+            playerBox.setAlignment(Pos.CENTER);
+
             Label label = new Label(player.getName());
             playerLabels.add(label);
-            playerBox.getChildren().add(label);
 
-            ImageView cardBack = new ImageView(new Image("file:src/images/card_back.png"));
-            cardBack.setFitHeight(150);
-            cardBack.setFitWidth(100);
-            playerCards.add(cardBack);
-            playerBox.getChildren().add(cardBack);
+            HBox handBox = new HBox(5);
+            playerHands.add(handBox);
+
+            ImageView spoonImage = new ImageView(new Image("file:src/images/spoon.png"));
+            spoonImage.setFitHeight(30);
+            spoonImage.setFitWidth(30);
+            spoonImage.setVisible(false);
+            playerSpoons.add(spoonImage);
+
+            playerBox.getChildren().addAll(label, handBox, spoonImage);
+            playersBox.getChildren().add(playerBox);
         }
 
-        root.getChildren().add(playerBox);
+        root.getChildren().add(playersBox);
 
         HBox buttonsBox = new HBox(10);
         buttonsBox.setAlignment(Pos.CENTER);
@@ -58,7 +68,10 @@ public class GameUI {
         Button pickSpoonButton = new Button("Pick Spoon");
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
-        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton);
+        Button replaceCardButton = new Button("Replace Card");
+        replaceCardButton.setOnAction(e -> replaceCard());
+
+        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, replaceCardButton);
         root.getChildren().add(buttonsBox);
 
         return root;
@@ -73,6 +86,7 @@ public class GameUI {
 
         game = new Game(players);
         currentPlayer = players.get(0);
+        game.startNPCPlayers();
     }
 
     private void drawCard() {
@@ -80,7 +94,11 @@ public class GameUI {
 
         Card drawnCard = game.getDeck().drawCard();
         if (drawnCard != null) {
-            currentPlayer.addCard(drawnCard);
+            if (currentPlayer.getHand().size() < 4) {
+                currentPlayer.addCard(drawnCard);
+            } else {
+                selectedCard = drawnCard;
+            }
             updateUI();
             game.checkForMatchAndSpoon(currentPlayer);
 
@@ -96,18 +114,27 @@ public class GameUI {
         }
     }
 
+    private void replaceCard() {
+        if (selectedCard != null) {
+            currentPlayer.addCard(selectedCard);
+            updateUI();
+            selectedCard = null;
+        }
+    }
+
     private void updateUI() {
         for (int i = 0; i < game.getPlayers().size(); i++) {
             Player player = game.getPlayers().get(i);
-            playerLabels.get(i).setText(player.getName() + "'s hand: " + player.getHand().toString());
-            if (!player.getHand().isEmpty()) {
-                Card lastCard = player.getHand().get(player.getHand().size() - 1);
-                ImageView cardImage = new ImageView(new Image("file:src/images/cards/" + lastCard.toString() + ".png"));
-                cardImage.setFitHeight(150);
-                cardImage.setFitWidth(100);
-                playerCards.set(i, cardImage);
-                root.getChildren().set(i + 1, cardImage);
+            HBox handBox = playerHands.get(i);
+            handBox.getChildren().clear();
+            for (Card card : player.getHand()) {
+                ImageView cardImage = new ImageView(new Image("file:src/images/cards/" + card.toString() + ".png"));
+                cardImage.setFitHeight(100);
+                cardImage.setFitWidth(70);
+                handBox.getChildren().add(cardImage);
             }
+
+            playerSpoons.get(i).setVisible(player.hasSpoon());
         }
     }
 

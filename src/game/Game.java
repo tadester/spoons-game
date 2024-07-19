@@ -2,6 +2,8 @@ package game;
 
 import game.cards.Deck;
 import game.players.Player;
+import javafx.application.Platform;
+
 import java.util.List;
 
 public class Game {
@@ -9,6 +11,7 @@ public class Game {
     private final Deck deck;
     private int numSpoons;
     private boolean gameOver;
+    private int gameSpeed = 1000; // Default speed is 1 card per second
 
     public Game(List<Player> players) {
         this.players = players;
@@ -42,5 +45,31 @@ public class Game {
     public void removePlayer(Player player) {
         players.remove(player);
         numSpoons--;
+    }
+
+    public void setGameSpeed(int speed) {
+        this.gameSpeed = speed;
+    }
+
+    public void startNPCPlayers() {
+        for (Player player : players) {
+            if (!player.getName().equals("Player 1")) {
+                new Thread(() -> {
+                    while (!isGameOver()) {
+                        try {
+                            Thread.sleep(gameSpeed);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        Platform.runLater(() -> {
+                            if (!isGameOver()) {
+                                player.addCard(deck.drawCard());
+                                checkForMatchAndSpoon(player);
+                            }
+                        });
+                    }
+                }).start();
+            }
+        }
     }
 }

@@ -25,7 +25,9 @@ public class Player {
     }
 
     public void addCard(Card card) {
-        hand.add(card);
+        if (hand.size() < 4) {
+            hand.add(card);
+        }
     }
 
     public void removeCard(Card card) {

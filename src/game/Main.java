@@ -1,6 +1,6 @@
 package game;
 
-import game.ui.GameUI;
+import game.ui.MenuUI;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -9,8 +9,8 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        GameUI gameUI = new GameUI();
-        Scene scene = new Scene(gameUI.createContent());
+        MenuUI menuUI = new MenuUI();
+        Scene scene = new Scene(menuUI.createContent(), 800, 600);
 
         primaryStage.setScene(scene);
         primaryStage.setTitle("Spoons Game");
