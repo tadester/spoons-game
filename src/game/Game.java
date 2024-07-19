@@ -32,7 +32,7 @@ public class Game {
         this.raceStarted = false;
         this.initialDrawComplete = false;
         this.random = new Random();
-        this.currentPlayer = players.get(0);
+        this.currentPlayer = players.get(currentPlayerIndex);  // Set initial player
         loadSettings();
     }
 
@@ -133,7 +133,7 @@ public class Game {
         raceStarted = false;
         gameOver = false;
         initialDrawComplete = false;
-        currentPlayer = players.get(0);
+        currentPlayer = players.get(currentPlayerIndex);
     }
 
     public void removePlayer(Player player) {
@@ -152,7 +152,7 @@ public class Game {
 
     public void nextTurn() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-        currentPlayer = players.get(currentPlayerIndex);
+        currentPlayer = players.get(currentPlayerIndex);  // Update current player
         System.out.println("Next turn: " + currentPlayer.getName());
     }
 
@@ -166,6 +166,7 @@ public class Game {
                 }
                 Player currentPlayer = getCurrentPlayer();
                 if (!currentPlayer.getName().equals("Player 1") && !isGameOver()) {
+                    System.out.println(currentPlayer.getName() + " is drawing a card.");
                     if (!initialDrawComplete) {
                         if (currentPlayer.getHand().size() < 4) {
                             currentPlayer.addCard(deck.drawCard());
