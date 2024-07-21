@@ -4,13 +4,13 @@ import game.Game;
 import game.cards.Card;
 import game.players.Player;
 import javafx.application.Platform;
-import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -38,8 +38,6 @@ public class GameUI {
     private Stage primaryStage;
     private Label turnLabel;
     private ImageView selectedCardImage = null;
-    private PseudoClass hoverPseudoClass = PseudoClass.getPseudoClass("hover");
-    private PseudoClass selectedPseudoClass = PseudoClass.getPseudoClass("selected");
 
     public GameUI(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -69,7 +67,7 @@ public class GameUI {
         ImageView deckImage = new ImageView(new Image("file:src/images/card_back.png"));
         deckImage.setFitHeight(100);
         deckImage.setFitWidth(70);
-        deckImage.setOnMouseClicked(e -> drawCard());  // Add click event to deck image
+        deckImage.setOnMouseClicked(e -> drawCard());
 
         centerBox.getChildren().addAll(deckImage, spoonsBox);
 
@@ -132,7 +130,7 @@ public class GameUI {
         playerLabels.add(label);
 
         HBox handBox = new HBox(5);
-        handBox.setAlignment(Pos.CENTER); // Center the cards
+        handBox.setAlignment(Pos.CENTER);
 
         if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
             handBox.setRotate(player.getName().equals("Player 2") ? 90 : -90);
@@ -177,29 +175,24 @@ public class GameUI {
     }
 
     private void drawCard() {
-        System.out.println("Player 1 is trying to draw a card");
         if (game.isGameOver()) return;
-        System.out.println(currentPlayer.getName() + " is the current player");
+
         if (currentPlayer.getName().equals("Player 1")) {
-            System.out.println("Player 1 is trying to draw a card 2");
             if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
-                System.out.println("Player 1 is trying to draw a card 3");
                 Card drawnCard = game.getDeck().drawCard();
-                System.out.println("Player 1 drew: " + drawnCard);
                 if (drawnCard != null) {
                     if (currentPlayer.getHand().size() < 4) {
                         currentPlayer.addCard(drawnCard);
                     } else {
                         selectedCard = drawnCard;
                     }
-                    updateUI();
+                    Platform.runLater(this::updateUI);
                     game.checkForMatchAndSpoon(currentPlayer);
 
                     // Move to next player
                     game.nextTurn();
                     currentPlayer = game.getCurrentPlayer();
                     turnLabel.setText("Turn: " + currentPlayer.getName());
-                    System.out.println("Turn: " + currentPlayer.getName());
                 } else {
                     endGame();
                 }
@@ -213,17 +206,18 @@ public class GameUI {
         if (selectedCard != null && currentPlayer.getName().equals("Player 1")) {
             currentPlayer.replaceCard(currentPlayer.getHand().indexOf(selectedCard));
             currentPlayer.addCard(selectedCard);
-            updateUI();
+            Platform.runLater(this::updateUI);
             selectedCard = null;
             if (selectedCardImage != null) {
-                selectedCardImage.pseudoClassStateChanged(selectedPseudoClass, false);
+                selectedCardImage.setScaleX(1.0);
+                selectedCardImage.setScaleY(1.0);
+                selectedCardImage.setEffect(null);
                 selectedCardImage = null;
             }
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
-            System.out.println("Turn: " + currentPlayer.getName());
         } else {
             showAlert("Not Your Turn", "Please wait for your turn to replace a card.");
         }
@@ -243,21 +237,29 @@ public class GameUI {
                     // Add hover and click effect
                     cardImage.setOnMouseEntered(e -> {
                         if (selectedCardImage != cardImage) {
-                            cardImage.pseudoClassStateChanged(hoverPseudoClass, true);
+                            cardImage.setScaleX(1.2);
+                            cardImage.setScaleY(1.2);
+                            cardImage.setEffect(new DropShadow(10, Color.YELLOW));
                         }
                     });
                     cardImage.setOnMouseExited(e -> {
                         if (selectedCardImage != cardImage) {
-                            cardImage.pseudoClassStateChanged(hoverPseudoClass, false);
+                            cardImage.setScaleX(1.0);
+                            cardImage.setScaleY(1.0);
+                            cardImage.setEffect(null);
                         }
                     });
                     cardImage.setOnMouseClicked(e -> {
                         if (selectedCardImage != null) {
-                            selectedCardImage.pseudoClassStateChanged(selectedPseudoClass, false);
+                            selectedCardImage.setScaleX(1.0);
+                            selectedCardImage.setScaleY(1.0);
+                            selectedCardImage.setEffect(null);
                         }
                         selectedCardImage = cardImage;
                         selectedCard = card;
-                        cardImage.pseudoClassStateChanged(selectedPseudoClass, true);
+                        cardImage.setScaleX(1.2);
+                        cardImage.setScaleY(1.2);
+                        cardImage.setEffect(new DropShadow(10, Color.YELLOW));
                     });
 
                     handBox.getChildren().add(cardImage);
@@ -278,19 +280,16 @@ public class GameUI {
     }
 
     private void handleSpoonPick() {
-        // Remove one spoon from the table
         if (!spoonsBox.getChildren().isEmpty()) {
             spoonsBox.getChildren().remove(0);
         }
 
-        // Check other players for spoon pick
         for (Player player : game.getPlayers()) {
             if (!player.hasSpoon()) {
                 player.grabSpoon();
             }
         }
 
-        // Remove the player who didn't pick a spoon
         boolean playerOut = false;
         for (Player player : game.getPlayers()) {
             if (!player.hasSpoon()) {
@@ -301,7 +300,7 @@ public class GameUI {
         }
 
         if (playerOut) {
-            updateUI();
+            Platform.runLater(this::updateUI);
             if (game.getPlayers().size() == 1) {
                 endGame();
             } else {
@@ -309,7 +308,6 @@ public class GameUI {
                 turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
             }
         } else {
-            // Reset spoons for the next round
             for (Player player : game.getPlayers()) {
                 player.resetSpoon();
             }
@@ -328,7 +326,6 @@ public class GameUI {
     }
 
     private void showMainMenu() {
-        // Code to show the main menu
         primaryStage.setScene(new Scene(new MenuUI(primaryStage).createContent(), 800, 600));
     }
 
