@@ -175,7 +175,7 @@ public class GameUI {
     private void drawCard() {
         System.out.println("Player 1 is trying to draw a card");
         if (game.isGameOver()) return;
-
+        System.out.println(currentPlayer.getName()+ "is the current player");
         if (currentPlayer.getName().equals("Player 1")) {
             System.out.println("Player 1 is trying to draw a card 2");
             if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
