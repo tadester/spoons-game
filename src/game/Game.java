@@ -1,5 +1,6 @@
 package game;
 
+import game.cards.Card;  // Add this import
 import game.cards.Deck;
 import game.players.Player;
 
@@ -154,6 +155,25 @@ public class Game {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
         currentPlayer = players.get(currentPlayerIndex);  // Update current player
         System.out.println("Next turn: " + currentPlayer.getName());
+        if (!currentPlayer.getName().equals("Player 1")) {
+            npcDrawCard(currentPlayer);
+        }
+    }
+
+    public void npcDrawCard(Player player) {
+        if (gameOver) return;
+
+        if (!isInitialDrawComplete() || player.getHand().size() < 4) {
+            Card drawnCard = deck.drawCard();
+            System.out.println(player.getName() + " drew: " + drawnCard);
+            if (drawnCard != null) {
+                player.addCard(drawnCard);
+                if (player.getHand().size() == 4) {
+                    checkForMatchAndSpoon(player);
+                }
+                nextTurn();
+            }
+        }
     }
 
     public void startNPCPlayers() {
@@ -166,19 +186,7 @@ public class Game {
                 }
                 Player currentPlayer = getCurrentPlayer();
                 if (!currentPlayer.getName().equals("Player 1") && !isGameOver()) {
-                    System.out.println(currentPlayer.getName() + " is drawing a card.");
-                    if (!initialDrawComplete) {
-                        if (currentPlayer.getHand().size() < 4) {
-                            currentPlayer.addCard(deck.drawCard());
-                        }
-                    } else {
-                        if (currentPlayer.getHand().size() == 4) {
-                            currentPlayer.addCard(deck.drawCard());
-                            currentPlayer.replaceCard(random.nextInt(4));
-                        }
-                    }
-                    checkForMatchAndSpoon(currentPlayer);
-                    nextTurn();
+                    npcDrawCard(currentPlayer);
                 }
             }
         }).start();
