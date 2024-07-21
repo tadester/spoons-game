@@ -212,6 +212,10 @@ public class GameUI {
             currentPlayer.addCard(selectedCard);
             updateUI();
             selectedCard = null;
+            selectedCardImage.setScaleX(1.0);
+            selectedCardImage.setScaleY(1.0);
+            selectedCardImage.setStyle(null);
+            selectedCardImage = null;
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
@@ -235,9 +239,11 @@ public class GameUI {
 
                     // Add hover effect
                     cardImage.setOnMouseEntered(e -> {
-                        cardImage.setScaleX(1.2);
-                        cardImage.setScaleY(1.2);
-                        cardImage.setStyle("-fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);");
+                        if (selectedCardImage != cardImage) {
+                            cardImage.setScaleX(1.2);
+                            cardImage.setScaleY(1.2);
+                            cardImage.setStyle("-fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);");
+                        }
                     });
                     cardImage.setOnMouseExited(e -> {
                         if (selectedCardImage != cardImage) {
