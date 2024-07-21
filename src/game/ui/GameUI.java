@@ -36,6 +36,7 @@ public class GameUI {
     private HBox spoonsBox;
     private Stage primaryStage;
     private Label turnLabel;
+    private ImageView selectedCardImage = null;
 
     public GameUI(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -231,6 +232,33 @@ public class GameUI {
                     ImageView cardImage = new ImageView(new Image("file:src/images/cards/" + card.toString() + ".png"));
                     cardImage.setFitHeight(100);
                     cardImage.setFitWidth(70);
+
+                    // Add hover effect
+                    cardImage.setOnMouseEntered(e -> {
+                        cardImage.setScaleX(1.2);
+                        cardImage.setScaleY(1.2);
+                        cardImage.setStyle("-fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);");
+                    });
+                    cardImage.setOnMouseExited(e -> {
+                        if (selectedCardImage != cardImage) {
+                            cardImage.setScaleX(1.0);
+                            cardImage.setScaleY(1.0);
+                            cardImage.setStyle(null);
+                        }
+                    });
+                    cardImage.setOnMouseClicked(e -> {
+                        if (selectedCardImage != null) {
+                            selectedCardImage.setScaleX(1.0);
+                            selectedCardImage.setScaleY(1.0);
+                            selectedCardImage.setStyle(null);
+                        }
+                        selectedCardImage = cardImage;
+                        selectedCard = card;
+                        cardImage.setScaleX(1.2);
+                        cardImage.setScaleY(1.2);
+                        cardImage.setStyle("-fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);");
+                    });
+
                     handBox.getChildren().add(cardImage);
                 }
             } else {
