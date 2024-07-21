@@ -1,0 +1,11 @@
+.image-view:hover {
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+    -fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);
+}
+
+.image-view:selected {
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+    -fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);
+}

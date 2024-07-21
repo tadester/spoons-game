@@ -4,6 +4,7 @@ import game.Game;
 import game.cards.Card;
 import game.players.Player;
 import javafx.application.Platform;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -37,6 +38,8 @@ public class GameUI {
     private Stage primaryStage;
     private Label turnLabel;
     private ImageView selectedCardImage = null;
+    private PseudoClass hoverPseudoClass = PseudoClass.getPseudoClass("hover");
+    private PseudoClass selectedPseudoClass = PseudoClass.getPseudoClass("selected");
 
     public GameUI(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -212,10 +215,10 @@ public class GameUI {
             currentPlayer.addCard(selectedCard);
             updateUI();
             selectedCard = null;
-            selectedCardImage.setScaleX(1.0);
-            selectedCardImage.setScaleY(1.0);
-            selectedCardImage.setStyle(null);
-            selectedCardImage = null;
+            if (selectedCardImage != null) {
+                selectedCardImage.pseudoClassStateChanged(selectedPseudoClass, false);
+                selectedCardImage = null;
+            }
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
@@ -237,32 +240,24 @@ public class GameUI {
                     cardImage.setFitHeight(100);
                     cardImage.setFitWidth(70);
 
-                    // Add hover effect
+                    // Add hover and click effect
                     cardImage.setOnMouseEntered(e -> {
                         if (selectedCardImage != cardImage) {
-                            cardImage.setScaleX(1.2);
-                            cardImage.setScaleY(1.2);
-                            cardImage.setStyle("-fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);");
+                            cardImage.pseudoClassStateChanged(hoverPseudoClass, true);
                         }
                     });
                     cardImage.setOnMouseExited(e -> {
                         if (selectedCardImage != cardImage) {
-                            cardImage.setScaleX(1.0);
-                            cardImage.setScaleY(1.0);
-                            cardImage.setStyle(null);
+                            cardImage.pseudoClassStateChanged(hoverPseudoClass, false);
                         }
                     });
                     cardImage.setOnMouseClicked(e -> {
                         if (selectedCardImage != null) {
-                            selectedCardImage.setScaleX(1.0);
-                            selectedCardImage.setScaleY(1.0);
-                            selectedCardImage.setStyle(null);
+                            selectedCardImage.pseudoClassStateChanged(selectedPseudoClass, false);
                         }
                         selectedCardImage = cardImage;
                         selectedCard = card;
-                        cardImage.setScaleX(1.2);
-                        cardImage.setScaleY(1.2);
-                        cardImage.setStyle("-fx-effect: dropshadow(gaussian, yellow, 10, 0.5, 0, 0);");
+                        cardImage.pseudoClassStateChanged(selectedPseudoClass, true);
                     });
 
                     handBox.getChildren().add(cardImage);
