@@ -11,6 +11,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -87,6 +88,7 @@ public class GameUI {
 
         for (Player player : game.getPlayers()) {
             VBox playerBox = createPlayerBox(player);
+
             if (player.getName().equals("Player 1")) {
                 board.setBottom(playerBox);
             } else if (player.getName().equals("Player 2")) {
@@ -135,34 +137,12 @@ public class GameUI {
 
         startExecutor();
 
+        // Debug event interception
+        root.setOnMouseClicked(e -> System.out.println("Root VBox clicked"));
+        gameBoard.setOnMouseClicked(e -> System.out.println("GameBoard StackPane clicked"));
+        board.setOnMouseClicked(e -> System.out.println("Board BorderPane clicked"));
+
         return root;
-    }
-
-    private VBox createPlayerBox(Player player) {
-        VBox playerBox = new VBox(5);
-        playerBox.setAlignment(Pos.CENTER);
-
-        Label label = new Label(player.getName());
-        playerLabels.add(label);
-
-        HBox handBox = new HBox(5);
-        handBox.setAlignment(Pos.CENTER);
-
-        if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
-            handBox.setRotate(player.getName().equals("Player 2") ? 90 : -90);
-        } else if (player.getName().equals("Player 3")) {
-            handBox.setRotate(180);
-        }
-        playerHands.add(handBox);
-
-        ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
-        spoonImage.setFitHeight(30);
-        spoonImage.setFitWidth(30);
-        spoonImage.setVisible(false);
-        playerSpoons.add(spoonImage);
-
-        playerBox.getChildren().addAll(label, handBox, spoonImage);
-        return playerBox;
     }
 
     private void setupGame() {
@@ -175,19 +155,6 @@ public class GameUI {
         game = new Game(players);
         currentPlayer = players.get(0);
         game.startNPCPlayers();
-    }
-
-    private void startExecutor() {
-        executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(() -> {
-            Platform.runLater(this::updateUI);
-        }, 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
-    }
-
-    private void stopExecutor() {
-        if (executor != null && !executor.isShutdown()) {
-            executor.shutdown();
-        }
     }
 
     private void drawCard() {
@@ -216,6 +183,72 @@ public class GameUI {
         } else {
             showAlert("Not Your Turn", "Please wait for your turn to draw a card.");
         }
+    }
+
+    private VBox createPlayerBox(Player player) {
+        VBox playerBox = new VBox(5);
+        playerBox.setAlignment(Pos.CENTER);
+
+        Label label = new Label(player.getName());
+        playerLabels.add(label);
+
+        HBox handBox = new HBox(5);
+        handBox.setAlignment(Pos.CENTER);
+
+        // Add debug statement for the handBox
+        handBox.setOnMouseClicked(e -> {
+            System.out.println("HandBox clicked: " + player.getName());
+            // Don't consume the event here, let it pass to the ImageView
+        });
+
+        if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
+            handBox.setRotate(player.getName().equals("Player 2") ? 90 : -90);
+        } else if (player.getName().equals("Player 3")) {
+            handBox.setRotate(180);
+        }
+        playerHands.add(handBox);
+
+        ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
+        spoonImage.setFitHeight(30);
+        spoonImage.setFitWidth(30);
+        spoonImage.setVisible(false);
+        playerSpoons.add(spoonImage);
+
+        playerBox.getChildren().addAll(label, handBox, spoonImage);
+
+        // Add debug statement for the playerBox
+        playerBox.setOnMouseClicked(e -> {
+            System.out.println("PlayerBox VBox clicked: " + player.getName());
+            e.consume(); // Prevent further propagation
+        });
+
+        return playerBox;
+    }
+
+    private ImageView createCardImageView(Card card) {
+        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+        cardImageView.setFitHeight(CARD_HEIGHT);
+        cardImageView.setFitWidth(CARD_WIDTH);
+
+        // Ensure the ImageView is at the front of the stack
+        cardImageView.toFront();
+
+        // Setting the event handler for the image
+        cardImageView.setOnMouseClicked(e -> {
+            System.out.println("Card image clicked: " + card); // Check if this is printed
+            e.consume(); // Prevent event propagation
+            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
+            selectedCard = card; // Set the selected card
+        });
+
+        // Adding an event filter to ensure the event is captured correctly
+        cardImageView.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+            System.out.println("Event filter: Card image clicked: " + card);
+            e.consume(); // Prevent event propagation
+            selectedCard = card; // Set the selected card
+        });
+
+        return cardImageView;
     }
 
     private void confirmReplaceCard() {
@@ -273,21 +306,19 @@ public class GameUI {
         }
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
-      
     }
 
-    private ImageView createCardImageView(Card card) {
-        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-        cardImageView.setFitHeight(CARD_HEIGHT);
-        cardImageView.setFitWidth(CARD_WIDTH);
+    private void startExecutor() {
+        executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(() -> {
+            Platform.runLater(this::updateUI);
+        }, 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
+    }
 
-        // Setting the event handler for the image
-        cardImageView.setOnMouseClicked(e -> {
-            System.out.println("Card image clicked: " + card); // Check if this is printed
-            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
-        });
-
-        return cardImageView;
+    private void stopExecutor() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+        }
     }
 
     private void handleSpoonPick() {
@@ -346,12 +377,12 @@ public class GameUI {
         pauseAlert.setTitle("Game Paused");
         pauseAlert.setHeaderText(null);
         pauseAlert.setContentText("The game is paused. Would you like to return to the main menu?");
-        
+
         ButtonType resumeButton = new ButtonType("Resume");
         ButtonType mainMenuButton = new ButtonType("Main Menu");
-        
+
         pauseAlert.getButtonTypes().setAll(resumeButton, mainMenuButton);
-        
+
         Optional<ButtonType> result = pauseAlert.showAndWait();
         if (result.isPresent() && result.get() == mainMenuButton) {
             showMainMenu();
