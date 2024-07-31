@@ -274,7 +274,6 @@ public class GameUI {
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
     }
-
     private Button createCardButton(Card card) {
         Button cardButton = new Button();
         ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
@@ -282,19 +281,21 @@ public class GameUI {
         cardImageView.setFitWidth(CARD_WIDTH);
         cardButton.setGraphic(cardImageView);
         cardButton.setPrefSize(CARD_WIDTH, CARD_HEIGHT);
-
+    
+        // Setting the event handler for the button
         cardButton.setOnAction(e -> {
-            System.out.println("Card button clicked: " + card);
+            System.out.println("Card button clicked: " + card); // Check if this is printed
             if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
                 selectedCard = card;
-                System.out.println("Selected card to replace: " + card);
+                System.out.println("Selected card to replace: " + card); // Confirm card selection
                 // Highlight the selected card
                 cardButton.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
             }
         });
-
+    
         return cardButton;
     }
+    
 
     private void handleSpoonPick() {
         if (!spoonsBox.getChildren().isEmpty()) {
@@ -309,7 +310,7 @@ public class GameUI {
 
         boolean playerOut = false;
         for (Player player : game.getPlayers()) {
-            if (!player hasSpoon()) {
+            if (!player.hasSpoon()) {
                 game.removePlayer(player);
                 playerOut = true;
                 break;
