@@ -209,9 +209,8 @@ public class GameUI {
             Platform.runLater(this::updateUI);
             selectedCard = null;
             if (selectedCardImage != null) {
-                selectedCardImage.setScaleX(1.0);
-                selectedCardImage.setScaleY(1.0);
                 selectedCardImage.setEffect(null);
+                selectedCardImage.setStyle(null);
                 selectedCardImage = null;
             }
             // Move to next player
@@ -237,29 +236,23 @@ public class GameUI {
                     // Add hover and click effect
                     cardImage.setOnMouseEntered(e -> {
                         if (selectedCardImage != cardImage) {
-                            cardImage.setScaleX(1.2);
-                            cardImage.setScaleY(1.2);
-                            cardImage.setEffect(new DropShadow(10, Color.YELLOW));
+                            cardImage.setStyle("-fx-border-color: yellow; -fx-border-width: 3;");
                         }
                     });
                     cardImage.setOnMouseExited(e -> {
                         if (selectedCardImage != cardImage) {
-                            cardImage.setScaleX(1.0);
-                            cardImage.setScaleY(1.0);
-                            cardImage.setEffect(null);
+                            cardImage.setStyle(null);
                         }
                     });
                     cardImage.setOnMouseClicked(e -> {
                         if (selectedCardImage != null) {
-                            selectedCardImage.setScaleX(1.0);
-                            selectedCardImage.setScaleY(1.0);
                             selectedCardImage.setEffect(null);
+                            selectedCardImage.setStyle(null);
                         }
                         selectedCardImage = cardImage;
                         selectedCard = card;
-                        cardImage.setScaleX(1.2);
-                        cardImage.setScaleY(1.2);
                         cardImage.setEffect(new DropShadow(10, Color.YELLOW));
+                        cardImage.setStyle("-fx-border-color: yellow; -fx-border-width: 5; -fx-background-color: #ffeb3b;");
                     });
 
                     handBox.getChildren().add(cardImage);
