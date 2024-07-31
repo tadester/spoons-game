@@ -10,7 +10,7 @@ public class Main extends Application {
     public void start(Stage primaryStage) {
         MenuUI menuUI = new MenuUI(primaryStage);
         Scene scene = new Scene(menuUI.createContent(), 800, 600);
-        scene.getStylesheets().add("file:src/styles.css");
+        scene.getStylesheets().add("file:src/game/styles.css");
         primaryStage.setScene(scene);
         primaryStage.setTitle("Spoons Game");
         primaryStage.show();

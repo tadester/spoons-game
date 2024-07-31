@@ -273,25 +273,22 @@ public class GameUI {
         }
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
-        System.out.println("Updated UI for turn: " + game.getCurrentPlayer().getName());
+      
     }
-private ImageView createCardImageView(Card card) {
-    ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-    cardImageView.setFitHeight(CARD_HEIGHT);
-    cardImageView.setFitWidth(CARD_WIDTH);
 
-    // Adding a border to see if the image is visually placed correctly
-    cardImageView.setStyle("-fx-border-color: red; -fx-border-width: 2px;");
-    
-    // Setting the event handler for the image
-    cardImageView.setOnMouseClicked(e -> {
-        System.out.println("Card image clicked: " + card); // Check if this is printed
-        cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
-    });
+    private ImageView createCardImageView(Card card) {
+        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+        cardImageView.setFitHeight(CARD_HEIGHT);
+        cardImageView.setFitWidth(CARD_WIDTH);
 
-    return cardImageView;
-}
+        // Setting the event handler for the image
+        cardImageView.setOnMouseClicked(e -> {
+            System.out.println("Card image clicked: " + card); // Check if this is printed
+            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
+        });
 
+        return cardImageView;
+    }
 
     private void handleSpoonPick() {
         if (!spoonsBox.getChildren().isEmpty()) {
