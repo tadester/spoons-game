@@ -9,12 +9,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.scene.control.Label;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -251,8 +251,8 @@ public class GameUI {
             handBox.getChildren().clear();
             if (player.getName().equals("Player 1")) {
                 for (Card card : player.getHand()) {
-                    Button cardButton = createCardButton(card);
-                    handBox.getChildren().add(cardButton);
+                    ImageView cardImageView = createCardImageView(card);
+                    handBox.getChildren().add(cardImageView);
                 }
             } else {
                 for (int j = 0; j < player.getHand().size(); j++) {
@@ -273,34 +273,25 @@ public class GameUI {
         }
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
+        System.out.println("Updated UI for turn: " + game.getCurrentPlayer().getName());
     }
+private ImageView createCardImageView(Card card) {
+    ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+    cardImageView.setFitHeight(CARD_HEIGHT);
+    cardImageView.setFitWidth(CARD_WIDTH);
 
-    private Button createCardButton(Card card) {
-        Button cardButton = new Button();
-        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-        cardImageView.setFitHeight(CARD_HEIGHT);
-        cardImageView.setFitWidth(CARD_WIDTH);
-        cardButton.setGraphic(cardImageView);
-        cardButton.setPrefSize(CARD_WIDTH, CARD_HEIGHT);
-
-        // Adding a border to see if the button is visually placed correctly
-        cardButton.setStyle("-fx-border-color: red; -fx-border-width: 2px;");
+    // Adding a border to see if the image is visually placed correctly
+    cardImageView.setStyle("-fx-border-color: red; -fx-border-width: 2px;");
     
-        // Setting the event handler for the button
-        cardButton.setOnAction(e -> {
-            System.out.println("Card button clicked: " + card); // Check if this is printed
-            if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
-                selectedCard = card;
-                System.out.println("Selected card to replace: " + card); // Confirm card selection
-                // Highlight the selected card
-                cardButton.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
-            } else {
-                System.out.println("Card selection skipped: either not selecting or not Player 1");
-            }
-        });
+    // Setting the event handler for the image
+    cardImageView.setOnMouseClicked(e -> {
+        System.out.println("Card image clicked: " + card); // Check if this is printed
+        cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
+    });
 
-        return cardButton;
-    }
+    return cardImageView;
+}
+
 
     private void handleSpoonPick() {
         if (!spoonsBox.getChildren().isEmpty()) {
