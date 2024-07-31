@@ -15,6 +15,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -87,6 +88,7 @@ public class GameUI {
 
         for (Player player : game.getPlayers()) {
             VBox playerBox = createPlayerBox(player);
+
             if (player.getName().equals("Player 1")) {
                 board.setBottom(playerBox);
             } else if (player.getName().equals("Player 2")) {
@@ -162,60 +164,27 @@ public class GameUI {
         playerSpoons.add(spoonImage);
 
         playerBox.getChildren().addAll(label, handBox, spoonImage);
+
+        // Do not consume the event here, just log it
+        playerBox.setOnMouseClicked(e -> System.out.println("PlayerBox VBox clicked: " + player.getName()));
+
         return playerBox;
     }
 
-    private void setupGame() {
-        List<Player> players = new ArrayList<>();
-        players.add(new Player("Player 1"));
-        players.add(new Player("Player 2"));
-        players.add(new Player("Player 3"));
-        players.add(new Player("Player 4"));
+    private ImageView createCardImageView(Card card) {
+        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+        cardImageView.setFitHeight(CARD_HEIGHT);
+        cardImageView.setFitWidth(CARD_WIDTH);
 
-        game = new Game(players);
-        currentPlayer = players.get(0);
-        game.startNPCPlayers();
-    }
+        // Setting the event handler for the image
+        cardImageView.setOnMouseClicked(e -> {
+            System.out.println("Card image clicked: " + card); // Ensure this is printed
+            e.consume(); // Prevent event propagation
+            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
+            selectedCard = card; // Set the selected card
+        });
 
-    private void startExecutor() {
-        executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(() -> {
-            Platform.runLater(this::updateUI);
-        }, 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
-    }
-
-    private void stopExecutor() {
-        if (executor != null && !executor.isShutdown()) {
-            executor.shutdown();
-        }
-    }
-
-    private void drawCard() {
-        if (game.isGameOver()) return;
-
-        if (currentPlayer.getName().equals("Player 1")) {
-            if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
-                Card drawnCard = game.getDeck().drawCard();
-                if (drawnCard != null) {
-                    if (currentPlayer.getHand().size() < 4) {
-                        currentPlayer.addCard(drawnCard);
-                    } else {
-                        selectedCard = drawnCard;
-                    }
-                    Platform.runLater(this::updateUI);
-                    game.checkForMatchAndSpoon(currentPlayer);
-
-                    // Move to next player
-                    game.nextTurn();
-                    currentPlayer = game.getCurrentPlayer();
-                    turnLabel.setText("Turn: " + currentPlayer.getName());
-                } else {
-                    endGame();
-                }
-            }
-        } else {
-            showAlert("Not Your Turn", "Please wait for your turn to draw a card.");
-        }
+        return cardImageView;
     }
 
     private void confirmReplaceCard() {
@@ -273,21 +242,19 @@ public class GameUI {
         }
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
-      
     }
 
-    private ImageView createCardImageView(Card card) {
-        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-        cardImageView.setFitHeight(CARD_HEIGHT);
-        cardImageView.setFitWidth(CARD_WIDTH);
+    private void startExecutor() {
+        executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(() -> {
+            Platform.runLater(this::updateUI);
+        }, 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
+    }
 
-        // Setting the event handler for the image
-        cardImageView.setOnMouseClicked(e -> {
-            System.out.println("Card image clicked: " + card); // Check if this is printed
-            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
-        });
-
-        return cardImageView;
+    private void stopExecutor() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+        }
     }
 
     private void handleSpoonPick() {
@@ -346,12 +313,12 @@ public class GameUI {
         pauseAlert.setTitle("Game Paused");
         pauseAlert.setHeaderText(null);
         pauseAlert.setContentText("The game is paused. Would you like to return to the main menu?");
-        
+
         ButtonType resumeButton = new ButtonType("Resume");
         ButtonType mainMenuButton = new ButtonType("Main Menu");
-        
+
         pauseAlert.getButtonTypes().setAll(resumeButton, mainMenuButton);
-        
+
         Optional<ButtonType> result = pauseAlert.showAndWait();
         if (result.isPresent() && result.get() == mainMenuButton) {
             showMainMenu();
