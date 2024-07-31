@@ -10,7 +10,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -18,7 +17,9 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,7 +38,10 @@ public class GameUI {
     private HBox spoonsBox;
     private Stage primaryStage;
     private Label turnLabel;
+    private boolean cheatMode = false;
+    private boolean selectingReplacement = false;
     private ImageView selectedCardImage = null;
+    private Map<String, Image> cardImagesCache = new HashMap<>(); // Cache for card images
 
     public GameUI(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -58,13 +62,13 @@ public class GameUI {
         spoonsBox = new HBox(10);
         spoonsBox.setAlignment(Pos.CENTER);
         for (int i = 0; i < game.getPlayers().size() - 1; i++) {
-            ImageView spoonImage = new ImageView(new Image("file:src/images/spoon.png"));
+            ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
             spoonImage.setFitHeight(50);
             spoonImage.setFitWidth(50);
             spoonsBox.getChildren().add(spoonImage);
         }
 
-        ImageView deckImage = new ImageView(new Image("file:src/images/card_back.png"));
+        ImageView deckImage = new ImageView(loadImage("file:src/images/card_back.png"));
         deckImage.setFitHeight(100);
         deckImage.setFitWidth(70);
         deckImage.setOnMouseClicked(e -> drawCard());
@@ -109,12 +113,18 @@ public class GameUI {
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
         Button replaceCardButton = new Button("Replace Card");
-        replaceCardButton.setOnAction(e -> replaceCard());
+        replaceCardButton.setOnAction(e -> {
+            showAlert("Replace Card", "Click the card you want to replace.");
+            selectingReplacement = true;
+        });
+
+        Button cheatButton = new Button("Cheat");
+        cheatButton.setOnAction(e -> toggleCheatMode());
 
         Button pauseButton = new Button("Pause");
         pauseButton.setOnAction(e -> showPauseMenu());
 
-        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, replaceCardButton, pauseButton);
+        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, replaceCardButton, cheatButton, pauseButton);
         root.getChildren().add(buttonsBox);
 
         startExecutor();
@@ -139,7 +149,7 @@ public class GameUI {
         }
         playerHands.add(handBox);
 
-        ImageView spoonImage = new ImageView(new Image("file:src/images/spoon.png"));
+        ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
         spoonImage.setFitHeight(30);
         spoonImage.setFitWidth(30);
         spoonImage.setVisible(false);
@@ -204,22 +214,27 @@ public class GameUI {
 
     private void replaceCard() {
         if (selectedCard != null && currentPlayer.getName().equals("Player 1")) {
+            System.out.println("Replacing card: " + selectedCard);
             currentPlayer.replaceCard(currentPlayer.getHand().indexOf(selectedCard));
             currentPlayer.addCard(selectedCard);
             Platform.runLater(this::updateUI);
             selectedCard = null;
-            if (selectedCardImage != null) {
-                selectedCardImage.setEffect(null);
-                selectedCardImage.setStyle(null);
-                selectedCardImage = null;
-            }
+            selectedCardImage = null;
+            selectingReplacement = false;
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
+        } else if (!selectingReplacement) {
+            showAlert("Replace Card", "Select a card to replace.");
         } else {
-            showAlert("Not Your Turn", "Please wait for your turn to replace a card.");
+            System.out.println("Selecting card to replace...");
         }
+    }
+
+    private void toggleCheatMode() {
+        cheatMode = !cheatMode;
+        updateUI();
     }
 
     private void updateUI() {
@@ -229,39 +244,20 @@ public class GameUI {
             handBox.getChildren().clear();
             if (player.getName().equals("Player 1")) {
                 for (Card card : player.getHand()) {
-                    ImageView cardImage = new ImageView(new Image("file:src/images/cards/" + card.toString() + ".png"));
-                    cardImage.setFitHeight(100);
-                    cardImage.setFitWidth(70);
-
-                    // Add hover and click effect
-                    cardImage.setOnMouseEntered(e -> {
-                        if (selectedCardImage != cardImage) {
-                            cardImage.setStyle("-fx-border-color: yellow; -fx-border-width: 3;");
-                        }
-                    });
-                    cardImage.setOnMouseExited(e -> {
-                        if (selectedCardImage != cardImage) {
-                            cardImage.setStyle(null);
-                        }
-                    });
-                    cardImage.setOnMouseClicked(e -> {
-                        if (selectedCardImage != null) {
-                            selectedCardImage.setEffect(null);
-                            selectedCardImage.setStyle(null);
-                        }
-                        selectedCardImage = cardImage;
-                        selectedCard = card;
-                        cardImage.setEffect(new DropShadow(10, Color.YELLOW));
-                        cardImage.setStyle("-fx-border-color: yellow; -fx-border-width: 5; -fx-background-color: #ffeb3b;");
-                    });
-
+                    ImageView cardImage = createCardImageView(card);
                     handBox.getChildren().add(cardImage);
                 }
             } else {
                 for (int j = 0; j < player.getHand().size(); j++) {
-                    ImageView cardImage = new ImageView(new Image("file:src/images/card_back.png"));
-                    cardImage.setFitHeight(100);
-                    cardImage.setFitWidth(70);
+                    Card card = player.getHand().get(j);
+                    ImageView cardImage;
+                    if (cheatMode) {
+                        cardImage = createCardImageView(card);
+                    } else {
+                        cardImage = new ImageView(loadImage("file:src/images/card_back.png"));
+                        cardImage.setFitHeight(100);
+                        cardImage.setFitWidth(70);
+                    }
                     handBox.getChildren().add(cardImage);
                 }
             }
@@ -270,6 +266,23 @@ public class GameUI {
         }
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
+    }
+
+    private ImageView createCardImageView(Card card) {
+        ImageView cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+        cardImage.setFitHeight(100);
+        cardImage.setFitWidth(70);
+
+        if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
+            cardImage.setOnMouseClicked(e -> {
+                selectedCard = card;
+                selectedCardImage = cardImage;
+                System.out.println("Card selected for replacement: " + card);
+                replaceCard();
+            });
+        }
+
+        return cardImage;
     }
 
     private void handleSpoonPick() {
@@ -357,5 +370,12 @@ public class GameUI {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private Image loadImage(String path) {
+        if (!cardImagesCache.containsKey(path)) {
+            cardImagesCache.put(path, new Image(path));
+        }
+        return cardImagesCache.get(path);
     }
 }
