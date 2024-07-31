@@ -118,6 +118,7 @@ public class GameUI {
         selectCardButton.setOnAction(e -> {
             showAlert("Replace Card", "Click the card you want to replace.");
             selectingReplacement = true;
+            System.out.println("Select Card to Replace button clicked. selectingReplacement set to true.");
         });
 
         Button confirmReplaceButton = new Button("Confirm Replace");
@@ -227,6 +228,7 @@ public class GameUI {
             Platform.runLater(this::updateUI);
             selectedCard = null;
             selectingReplacement = false;
+            System.out.println("Card replaced successfully.");
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
@@ -282,9 +284,12 @@ public class GameUI {
         cardButton.setPrefSize(CARD_WIDTH, CARD_HEIGHT);
 
         cardButton.setOnAction(e -> {
-            if (currentPlayer.getName().equals("Player 1")) {
+            System.out.println("Card button clicked: " + card);
+            if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
                 selectedCard = card;
                 System.out.println("Selected card to replace: " + card);
+                // Highlight the selected card
+                cardButton.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
             }
         });
 
@@ -304,7 +309,7 @@ public class GameUI {
 
         boolean playerOut = false;
         for (Player player : game.getPlayers()) {
-            if (!player.hasSpoon()) {
+            if (!player hasSpoon()) {
                 game.removePlayer(player);
                 playerOut = true;
                 break;
