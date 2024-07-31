@@ -137,11 +137,6 @@ public class GameUI {
 
         startExecutor();
 
-        // Debug event interception
-        root.setOnMouseClicked(e -> System.out.println("Root VBox clicked"));
-        gameBoard.setOnMouseClicked(e -> System.out.println("GameBoard StackPane clicked"));
-        board.setOnMouseClicked(e -> System.out.println("Board BorderPane clicked"));
-
         return root;
     }
 
@@ -219,7 +214,7 @@ public class GameUI {
         // Add debug statement for the playerBox
         playerBox.setOnMouseClicked(e -> {
             System.out.println("PlayerBox VBox clicked: " + player.getName());
-            e.consume(); // Prevent further propagation
+            // Don't consume the event here, let it pass to the ImageView
         });
 
         return playerBox;
@@ -230,21 +225,15 @@ public class GameUI {
         cardImageView.setFitHeight(CARD_HEIGHT);
         cardImageView.setFitWidth(CARD_WIDTH);
 
-        // Ensure the ImageView is at the front of the stack
-        cardImageView.toFront();
+        // Set the ImageView to be at the top of the stack
+        StackPane.setAlignment(cardImageView, Pos.CENTER);
+        cardImageView.setPickOnBounds(true);
 
         // Setting the event handler for the image
         cardImageView.setOnMouseClicked(e -> {
             System.out.println("Card image clicked: " + card); // Check if this is printed
             e.consume(); // Prevent event propagation
             cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
-            selectedCard = card; // Set the selected card
-        });
-
-        // Adding an event filter to ensure the event is captured correctly
-        cardImageView.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-            System.out.println("Event filter: Card image clicked: " + card);
-            e.consume(); // Prevent event propagation
             selectedCard = card; // Set the selected card
         });
 
