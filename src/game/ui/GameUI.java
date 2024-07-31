@@ -226,7 +226,7 @@ public class GameUI {
             Card newCard = game.getDeck().drawCard();
             currentPlayer.addCard(newCard);
             Platform.runLater(this::updateUI);
-            selectedCard = null;
+            selectedCard = null; // Reset after confirming replacement
             selectingReplacement = false;
             System.out.println("Card replaced successfully.");
             // Move to next player
@@ -274,6 +274,7 @@ public class GameUI {
 
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
     }
+
     private Button createCardButton(Card card) {
         Button cardButton = new Button();
         ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
@@ -281,6 +282,9 @@ public class GameUI {
         cardImageView.setFitWidth(CARD_WIDTH);
         cardButton.setGraphic(cardImageView);
         cardButton.setPrefSize(CARD_WIDTH, CARD_HEIGHT);
+
+        // Adding a border to see if the button is visually placed correctly
+        cardButton.setStyle("-fx-border-color: red; -fx-border-width: 2px;");
     
         // Setting the event handler for the button
         cardButton.setOnAction(e -> {
@@ -290,12 +294,13 @@ public class GameUI {
                 System.out.println("Selected card to replace: " + card); // Confirm card selection
                 // Highlight the selected card
                 cardButton.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
+            } else {
+                System.out.println("Card selection skipped: either not selecting or not Player 1");
             }
         });
-    
+
         return cardButton;
     }
-    
 
     private void handleSpoonPick() {
         if (!spoonsBox.getChildren().isEmpty()) {
