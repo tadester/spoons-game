@@ -40,7 +40,6 @@ public class GameUI {
     private Label turnLabel;
     private boolean cheatMode = false;
     private boolean selectingReplacement = false;
-    private Button selectedCardButton = null;
     private Map<String, Image> cardImagesCache = new HashMap<>();
 
     private static final int CARD_WIDTH = 70;
@@ -227,13 +226,13 @@ public class GameUI {
             currentPlayer.addCard(newCard);
             Platform.runLater(this::updateUI);
             selectedCard = null;
-            selectedCardButton = null;
             selectingReplacement = false;
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
         } else {
+            System.out.println("No card selected or it's not your turn.");
             showAlert("Replace Card", "No card selected or it's not your turn.");
         }
     }
@@ -283,9 +282,8 @@ public class GameUI {
         cardButton.setPrefSize(CARD_WIDTH, CARD_HEIGHT);
 
         cardButton.setOnAction(e -> {
-            if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
+            if (currentPlayer.getName().equals("Player 1")) {
                 selectedCard = card;
-                selectedCardButton = cardButton;
                 System.out.println("Selected card to replace: " + card);
             }
         });
