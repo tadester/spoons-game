@@ -40,8 +40,11 @@ public class GameUI {
     private Label turnLabel;
     private boolean cheatMode = false;
     private boolean selectingReplacement = false;
-    private ImageView selectedCardImage = null;
-    private Map<String, Image> cardImagesCache = new HashMap<>(); // Cache for card images
+    private Button selectedCardButton = null;
+    private Map<String, Image> cardImagesCache = new HashMap<>();
+
+    private static final int CARD_WIDTH = 70;
+    private static final int CARD_HEIGHT = 100;
 
     public GameUI(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -69,8 +72,8 @@ public class GameUI {
         }
 
         ImageView deckImage = new ImageView(loadImage("file:src/images/card_back.png"));
-        deckImage.setFitHeight(100);
-        deckImage.setFitWidth(70);
+        deckImage.setFitHeight(CARD_HEIGHT);
+        deckImage.setFitWidth(CARD_WIDTH);
         deckImage.setOnMouseClicked(e -> drawCard());
 
         centerBox.getChildren().addAll(deckImage, spoonsBox);
@@ -112,11 +115,14 @@ public class GameUI {
         Button pickSpoonButton = new Button("Pick Spoon");
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
-        Button replaceCardButton = new Button("Replace Card");
-        replaceCardButton.setOnAction(e -> {
+        Button selectCardButton = new Button("Select Card to Replace");
+        selectCardButton.setOnAction(e -> {
             showAlert("Replace Card", "Click the card you want to replace.");
             selectingReplacement = true;
         });
+
+        Button confirmReplaceButton = new Button("Confirm Replace");
+        confirmReplaceButton.setOnAction(e -> confirmReplaceCard());
 
         Button cheatButton = new Button("Cheat");
         cheatButton.setOnAction(e -> toggleCheatMode());
@@ -124,7 +130,7 @@ public class GameUI {
         Button pauseButton = new Button("Pause");
         pauseButton.setOnAction(e -> showPauseMenu());
 
-        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, replaceCardButton, cheatButton, pauseButton);
+        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, selectCardButton, confirmReplaceButton, cheatButton, pauseButton);
         root.getChildren().add(buttonsBox);
 
         startExecutor();
@@ -212,23 +218,23 @@ public class GameUI {
         }
     }
 
-    private void replaceCard() {
+    private void confirmReplaceCard() {
+        System.out.println("Confirming replacement. Selected card: " + selectedCard);
         if (selectedCard != null && currentPlayer.getName().equals("Player 1")) {
             System.out.println("Replacing card: " + selectedCard);
-            currentPlayer.replaceCard(currentPlayer.getHand().indexOf(selectedCard));
-            currentPlayer.addCard(selectedCard);
+            currentPlayer.getHand().remove(selectedCard);
+            Card newCard = game.getDeck().drawCard();
+            currentPlayer.addCard(newCard);
             Platform.runLater(this::updateUI);
             selectedCard = null;
-            selectedCardImage = null;
+            selectedCardButton = null;
             selectingReplacement = false;
             // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
-        } else if (!selectingReplacement) {
-            showAlert("Replace Card", "Select a card to replace.");
         } else {
-            System.out.println("Selecting card to replace...");
+            showAlert("Replace Card", "No card selected or it's not your turn.");
         }
     }
 
@@ -244,20 +250,20 @@ public class GameUI {
             handBox.getChildren().clear();
             if (player.getName().equals("Player 1")) {
                 for (Card card : player.getHand()) {
-                    ImageView cardImage = createCardImageView(card);
-                    handBox.getChildren().add(cardImage);
+                    Button cardButton = createCardButton(card);
+                    handBox.getChildren().add(cardButton);
                 }
             } else {
                 for (int j = 0; j < player.getHand().size(); j++) {
                     Card card = player.getHand().get(j);
                     ImageView cardImage;
                     if (cheatMode) {
-                        cardImage = createCardImageView(card);
+                        cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
                     } else {
                         cardImage = new ImageView(loadImage("file:src/images/card_back.png"));
-                        cardImage.setFitHeight(100);
-                        cardImage.setFitWidth(70);
                     }
+                    cardImage.setFitHeight(CARD_HEIGHT);
+                    cardImage.setFitWidth(CARD_WIDTH);
                     handBox.getChildren().add(cardImage);
                 }
             }
@@ -268,21 +274,23 @@ public class GameUI {
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
     }
 
-    private ImageView createCardImageView(Card card) {
-        ImageView cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-        cardImage.setFitHeight(100);
-        cardImage.setFitWidth(70);
+    private Button createCardButton(Card card) {
+        Button cardButton = new Button();
+        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+        cardImageView.setFitHeight(CARD_HEIGHT);
+        cardImageView.setFitWidth(CARD_WIDTH);
+        cardButton.setGraphic(cardImageView);
+        cardButton.setPrefSize(CARD_WIDTH, CARD_HEIGHT);
 
-        if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
-            cardImage.setOnMouseClicked(e -> {
+        cardButton.setOnAction(e -> {
+            if (selectingReplacement && currentPlayer.getName().equals("Player 1")) {
                 selectedCard = card;
-                selectedCardImage = cardImage;
-                System.out.println("Card selected for replacement: " + card);
-                replaceCard();
-            });
-        }
+                selectedCardButton = cardButton;
+                System.out.println("Selected card to replace: " + card);
+            }
+        });
 
-        return cardImage;
+        return cardButton;
     }
 
     private void handleSpoonPick() {
