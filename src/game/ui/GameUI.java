@@ -52,6 +52,7 @@ public class GameUI {
     }
 
     public VBox createContent() {
+        System.out.println("Creating Content...");
         root = new VBox(10);
         root.setAlignment(Pos.CENTER);
         root.setBackground(new Background(new BackgroundFill(Color.LIGHTBLUE, null, null)));
@@ -118,7 +119,7 @@ public class GameUI {
 
         Button selectCardButton = new Button("Select Card to Replace");
         selectCardButton.setOnAction(e -> {
-            showAlert("Replace Card", "Click the card you want to replace.");
+            showAlert("Replace Card", "Click the 'Replace this card' button under the card you want to replace.");
             selectingReplacement = true;
             System.out.println("Select Card to Replace button clicked. selectingReplacement set to true.");
         });
@@ -137,21 +138,11 @@ public class GameUI {
 
         startExecutor();
 
-        // Ensure only buttons and images are clickable
-        makeOnlyImagesAndButtonsClickable(root);
-
         return root;
     }
 
-    private void makeOnlyImagesAndButtonsClickable(Pane pane) {
-        pane.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-            if (!(e.getTarget() instanceof ImageView || e.getTarget() instanceof Button)) {
-                e.consume();
-            }
-        });
-    }
-
     private void setupGame() {
+        System.out.println("Setting up Game...");
         List<Player> players = new ArrayList<>();
         players.add(new Player("Player 1"));
         players.add(new Player("Player 2"));
@@ -164,6 +155,7 @@ public class GameUI {
     }
 
     private void drawCard() {
+        System.out.println("Drawing card...");
         if (game.isGameOver()) return;
 
         if (currentPlayer.getName().equals("Player 1")) {
@@ -214,15 +206,34 @@ public class GameUI {
         return playerBox;
     }
 
+    private void addCardToHand(HBox handBox, Card card) {
+        VBox cardBox = new VBox(5);
+        cardBox.setAlignment(Pos.CENTER);
+
+        ImageView cardImageView = createCardImageView(card);
+        Button replaceButton = new Button("Replace this card");
+
+        replaceButton.setOnAction(e -> {
+            System.out.println("Button clicked for card: " + card);
+            if (selectingReplacement) {
+                System.out.println("Replace this card button clicked for card: " + card);
+                selectedCard = card;
+            } else {
+                System.out.println("Replace button clicked but not in replacement mode.");
+            }
+        });
+
+        cardBox.getChildren().addAll(cardImageView, replaceButton);
+        handBox.getChildren().add(cardBox);
+    }
+
     private ImageView createCardImageView(Card card) {
         ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
         cardImageView.setFitHeight(CARD_HEIGHT);
         cardImageView.setFitWidth(CARD_WIDTH);
 
         cardImageView.setOnMouseClicked(e -> {
-            System.out.println("Card image clicked: " + card);
-            e.consume();
-            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
+            System.out.println("Card image clicked: " + card); // Check if this is printed
             selectedCard = card;
         });
 
@@ -255,14 +266,14 @@ public class GameUI {
     }
 
     private void updateUI() {
+        System.out.println("Updating UI...");
         for (int i = 0; i < game.getPlayers().size(); i++) {
             Player player = game.getPlayers().get(i);
             HBox handBox = playerHands.get(i);
             handBox.getChildren().clear();
             if (player.getName().equals("Player 1")) {
                 for (Card card : player.getHand()) {
-                    ImageView cardImageView = createCardImageView(card);
-                    handBox.getChildren().add(cardImageView);
+                    addCardToHand(handBox, card);
                 }
             } else {
                 for (int j = 0; j < player.getHand().size(); j++) {
