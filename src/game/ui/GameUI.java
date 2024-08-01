@@ -11,11 +11,11 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -137,7 +137,18 @@ public class GameUI {
 
         startExecutor();
 
+        // Ensure only buttons and images are clickable
+        makeOnlyImagesAndButtonsClickable(root);
+
         return root;
+    }
+
+    private void makeOnlyImagesAndButtonsClickable(Pane pane) {
+        pane.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+            if (!(e.getTarget() instanceof ImageView || e.getTarget() instanceof Button)) {
+                e.consume();
+            }
+        });
     }
 
     private void setupGame() {
@@ -190,17 +201,6 @@ public class GameUI {
         HBox handBox = new HBox(5);
         handBox.setAlignment(Pos.CENTER);
 
-        // Add debug statement for the handBox
-        handBox.setOnMouseClicked(e -> {
-            System.out.println("HandBox clicked: " + player.getName());
-            // Don't consume the event here, let it pass to the ImageView
-        });
-
-        if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
-            handBox.setRotate(player.getName().equals("Player 2") ? 90 : -90);
-        } else if (player.getName().equals("Player 3")) {
-            handBox.setRotate(180);
-        }
         playerHands.add(handBox);
 
         ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
@@ -211,12 +211,6 @@ public class GameUI {
 
         playerBox.getChildren().addAll(label, handBox, spoonImage);
 
-        // Add debug statement for the playerBox
-        playerBox.setOnMouseClicked(e -> {
-            System.out.println("PlayerBox VBox clicked: " + player.getName());
-            // Don't consume the event here, let it pass to the ImageView
-        });
-
         return playerBox;
     }
 
@@ -225,16 +219,11 @@ public class GameUI {
         cardImageView.setFitHeight(CARD_HEIGHT);
         cardImageView.setFitWidth(CARD_WIDTH);
 
-        // Set the ImageView to be at the top of the stack
-        StackPane.setAlignment(cardImageView, Pos.CENTER);
-        cardImageView.setPickOnBounds(true);
-
-        // Setting the event handler for the image
         cardImageView.setOnMouseClicked(e -> {
-            System.out.println("Card image clicked: " + card); // Check if this is printed
-            e.consume(); // Prevent event propagation
-            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
-            selectedCard = card; // Set the selected card
+            System.out.println("Card image clicked: " + card);
+            e.consume();
+            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
+            selectedCard = card;
         });
 
         return cardImageView;
@@ -248,10 +237,9 @@ public class GameUI {
             Card newCard = game.getDeck().drawCard();
             currentPlayer.addCard(newCard);
             Platform.runLater(this::updateUI);
-            selectedCard = null; // Reset after confirming replacement
+            selectedCard = null;
             selectingReplacement = false;
             System.out.println("Card replaced successfully.");
-            // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
@@ -299,9 +287,7 @@ public class GameUI {
 
     private void startExecutor() {
         executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(() -> {
-            Platform.runLater(this::updateUI);
-        }, 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
+        executor.scheduleAtFixedRate(() -> Platform.runLater(this::updateUI), 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
     }
 
     private void stopExecutor() {
