@@ -11,17 +11,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.Label;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -182,6 +177,54 @@ public class GameUI {
         overlay.setManaged(true);
     }
 
+    private VBox createPlayerBox(Player player) {
+        VBox playerBox = new VBox(5);
+        playerBox.setAlignment(Pos.CENTER);
+
+        Label label = new Label(player.getName());
+        playerLabels.add(label);
+
+        HBox handBox = new HBox(5);
+        handBox.setAlignment(Pos.CENTER);
+
+        if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
+            handBox.setRotate(player.getName().equals("Player 2") ? 90 : -90);
+        } else if (player.getName().equals("Player 3")) {
+            handBox.setRotate(180);
+        }
+        playerHands.add(handBox);
+
+        ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
+        spoonImage.setFitHeight(30);
+        spoonImage.setFitWidth(30);
+        spoonImage.setVisible(false);
+        playerSpoons.add(spoonImage);
+
+        playerBox.getChildren().addAll(label, handBox, spoonImage);
+
+        // Make the playerBox and handBox non-clickable
+        playerBox.setMouseTransparent(true);
+        handBox.setMouseTransparent(true);
+
+        return playerBox;
+    }
+
+    private ImageView createCardImageView(Card card) {
+        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+        cardImageView.setFitHeight(CARD_HEIGHT);
+        cardImageView.setFitWidth(CARD_WIDTH);
+
+        // Setting the event handler for the image
+        cardImageView.setOnMouseClicked(e -> {
+            System.out.println("Card image clicked: " + card); // Check if this is printed
+            e.consume(); // Prevent event propagation
+            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
+            selectedCard = card; // Set the selected card
+        });
+
+        return cardImageView;
+    }
+
     private void setupGame() {
         List<Player> players = new ArrayList<>();
         players.add(new Player("Player 1"));
@@ -218,51 +261,59 @@ public class GameUI {
                 }
             }
         } else {
-            showAlert("Not Your Turn", "Please wait for your turn to draw a card.");
+            npcTurn();
         }
     }
 
-    private VBox createPlayerBox(Player player) {
-        VBox playerBox = new VBox(5);
-        playerBox.setAlignment(Pos.CENTER);
+    private void npcTurn() {
+        if (game.isGameOver()) return;
 
-        Label label = new Label(player.getName());
-        playerLabels.add(label);
+        if (currentPlayer != null && !currentPlayer.getName().equals("Player 1")) {
+            // NPCs automatically draw or replace a card
+            if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
+                Card drawnCard = game.getDeck().drawCard();
+                if (drawnCard != null) {
+                    currentPlayer.addCard(drawnCard);
+                    game.checkForMatchAndSpoon(currentPlayer);
 
-        HBox handBox = new HBox(5);
-        handBox.setAlignment(Pos.CENTER);
+                    // If the hand size exceeds 4 after the draw, replace the card
+                    if (currentPlayer.getHand().size() > 4) {
+                        Card cardToReplace = selectBestCardToReplace(currentPlayer);
+                        currentPlayer.getHand().remove(cardToReplace);
+                        System.out.println(currentPlayer.getName() + " replaced card: " + cardToReplace);
+                    }
+                }
+            }
 
-        if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
-            handBox.setRotate(player.getName().equals("Player 2") ? 90 : -90);
-        } else if (player.getName().equals("Player 3")) {
-            handBox.setRotate(180);
+            game.nextTurn();
+            currentPlayer = game.getCurrentPlayer();
+            turnLabel.setText("Turn: " + currentPlayer.getName());
+
+            if (!currentPlayer.getName().equals("Player 1")) {
+                npcTurn(); // Continue with the next NPC's turn
+            }
         }
-        playerHands.add(handBox);
-
-        ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
-        spoonImage.setFitHeight(30);
-        spoonImage.setFitWidth(30);
-        spoonImage.setVisible(false);
-        playerSpoons.add(spoonImage);
-
-        playerBox.getChildren().addAll(label, handBox, spoonImage);
-
-        return playerBox;
     }
 
-    private ImageView createCardImageView(Card card) {
-        ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-        cardImageView.setFitHeight(CARD_HEIGHT);
-        cardImageView.setFitWidth(CARD_WIDTH);
+    private Card selectBestCardToReplace(Player player) {
+        // Group cards by suit
+        Map<String, List<Card>> cardsBySuit = new HashMap<>();
+        for (Card card : player.getHand()) {
+            cardsBySuit.putIfAbsent(card.getSuit(), new ArrayList<>());
+            cardsBySuit.get(card.getSuit()).add(card);
+        }
 
-        cardImageView.setOnMouseClicked(e -> {
-            System.out.println("Card image clicked: " + card);
-            e.consume();
-            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
-            selectedCard = card;
-        });
+        // Find the suit with the most cards
+        String targetSuit = cardsBySuit.entrySet().stream()
+                .max(Comparator.comparingInt(entry -> entry.getValue().size()))
+                .map(Map.Entry::getKey)
+                .orElse(null);
 
-        return cardImageView;
+        // Replace a card that is not of the target suit
+        return player.getHand().stream()
+                .filter(card -> !card.getSuit().equals(targetSuit))
+                .findFirst()
+                .orElse(player.getHand().get(0)); // If all cards are the same suit, just return the first one
     }
 
     private void confirmReplaceCard() {
