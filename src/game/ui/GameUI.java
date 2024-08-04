@@ -38,6 +38,7 @@ public class GameUI {
     private boolean selectingReplacement = false;
     private Map<String, Image> cardImagesCache = new HashMap<>();
     private int npcReactionTimeRange;
+    private int availableSpoons;  // Track the number of available spoons
 
     private static final int CARD_WIDTH = 70;
     private static final int CARD_HEIGHT = 100;
@@ -61,7 +62,9 @@ public class GameUI {
 
         spoonsBox = new HBox(10);
         spoonsBox.setAlignment(Pos.CENTER);
-        for (int i = 0; i < game.getPlayers().size() - 1; i++) {
+        availableSpoons = game.getPlayers().size() - 1; // Initialize available spoons
+
+        for (int i = 0; i < availableSpoons; i++) {
             ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
             spoonImage.setFitHeight(50);
             spoonImage.setFitWidth(50);
@@ -138,7 +141,6 @@ public class GameUI {
 
         return root;
     }
-
     private void setupGame() {
         List<Player> players = new ArrayList<>();
         players.add(new Player("Player 1"));
@@ -147,10 +149,13 @@ public class GameUI {
         players.add(new Player("Player 4"));
 
         game = new Game(players);
+        game.setOnSpoonTakenCallback(this::updateUI);
+        game.setOnPlayerOutCallback(v -> showPlayerLostPopup());
+        game.setUpdateUICallback(() -> Platform.runLater(this::updateUI)); // Set up the UI update callback
+
         currentPlayer = players.get(0);
         game.startNPCPlayers();
     }
-
     private void drawCard() {
         if (game.isGameOver()) return;
 
@@ -165,14 +170,7 @@ public class GameUI {
                     }
                     Platform.runLater(this::updateUI);
                     game.checkForMatchAndSpoon(currentPlayer);
-
-                    // Move to next player
-                    game.nextTurn();
-                    currentPlayer = game.getCurrentPlayer();
-                    turnLabel.setText("Turn: " + currentPlayer.getName());
-                    if (!currentPlayer.getName().equals("Player 1")) {
-                        npcTurn();
-                    }
+                    game.nextTurn(); // Move to the next player's turn
                 } else {
                     endGame();
                 }
@@ -227,16 +225,13 @@ public class GameUI {
     }
 
     private void confirmReplaceCard() {
-        System.out.println("Confirming replacement. Selected card: " + selectedCard);
         if (selectedCard != null && currentPlayer.getName().equals("Player 1")) {
-            System.out.println("Replacing card: " + selectedCard);
             currentPlayer.getHand().remove(selectedCard);
             Card newCard = game.getDeck().drawCard();
             currentPlayer.addCard(newCard);
             Platform.runLater(this::updateUI);
             selectedCard = null;
             selectingReplacement = false;
-            System.out.println("Card replaced successfully.");
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
@@ -244,7 +239,6 @@ public class GameUI {
                 npcTurn();
             }
         } else {
-            System.out.println("No card selected or it's not your turn.");
             showAlert("Replace Card", "No card selected or it's not your turn.");
         }
     }
@@ -287,28 +281,38 @@ public class GameUI {
         }
     }
 
-    private void handleSpoonPick() {
-        if (!spoonsBox.getChildren().isEmpty()) {
-            spoonsBox.getChildren().remove(0);
-        }
-
-        for (Player player : game.getPlayers()) {
-            if (!player.hasSpoon()) {
-                player.grabSpoon();
-            }
+    private void handleSpoonPick(Player spoonPicker) {
+        if (availableSpoons > 0 && !isRaceFinished()) {
+            spoonPicker.grabSpoon();
+            availableSpoons--;
+            removeSpoonFromBoard();
         }
 
         if (isRaceFinished()) {
             eliminatePlayersWithoutSpoons();
-        } else {
-            for (Player player : game.getPlayers()) {
-                player.resetSpoon();
+            if (game.getPlayers().size() > 1) {
+                game.startNewRound();
+                updateUI();
+            } else {
+                declareWinner(game.getPlayers().get(0));
             }
+        } else {
+            raceForSpoons(spoonPicker);
         }
     }
 
+    private void removeSpoonFromBoard() {
+        if (!spoonsBox.getChildren().isEmpty()) {
+            spoonsBox.getChildren().remove(0);
+        }
+    }
+
+    private void raceForSpoons(Player initialPicker) {
+        game.nextTurn(); // Let the Game class handle the NPC's turn after the initial player's turn
+    }
+
     private boolean isRaceFinished() {
-        return spoonsBox.getChildren().isEmpty();
+        return availableSpoons == 0;
     }
 
     private void eliminatePlayersWithoutSpoons() {
@@ -321,12 +325,12 @@ public class GameUI {
 
         game.getPlayers().removeAll(eliminatedPlayers);
 
+        if (!eliminatedPlayers.isEmpty()) {
+            Platform.runLater(() -> showEliminationPopup(eliminatedPlayers));
+        }
+
         if (game.getPlayers().size() == 1) {
             declareWinner(game.getPlayers().get(0));
-        } else {
-            showEliminationPopup(eliminatedPlayers);
-            game.startNewRound();
-            turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
         }
     }
 
@@ -341,6 +345,31 @@ public class GameUI {
         alert.setHeaderText(null);
         alert.setContentText(message.toString());
         alert.showAndWait();
+    }
+
+    private void showPlayerLostPopup() {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Game Over");
+            alert.setHeaderText(null);
+            alert.setContentText("You have lost!");
+
+            ButtonType playAgainButton = new ButtonType("Play Again");
+            ButtonType mainMenuButton = new ButtonType("Main Menu");
+
+            alert.getButtonTypes().setAll(playAgainButton, mainMenuButton);
+
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == playAgainButton) {
+                restartGame();
+            } else {
+                showMainMenu();
+            }
+        });
+    }
+
+    private void restartGame() {
+        primaryStage.setScene(new Scene(new GameUI(primaryStage, npcReactionTimeRange).createContent(), 800, 600));
     }
 
     private void endGame() {
@@ -390,73 +419,17 @@ public class GameUI {
     private void pickSpoon() {
         if (currentPlayer.checkForMatch() || game.isRaceStarted()) {
             game.pickSpoon(currentPlayer);
-            handleSpoonPick();
+            handleSpoonPick(currentPlayer);
 
             // Start the race for spoons
-            raceForSpoons();
+            raceForSpoons(currentPlayer);
         } else {
             showAlert("Cannot Grab Spoon", "You cannot grab a spoon without having four cards of the same suit or someone else grabbing a spoon.");
         }
     }
 
-    private void raceForSpoons() {
-        for (Player player : game.getPlayers()) {
-            if (!player.getName().equals("Player 1") && !player.hasSpoon()) {
-                int delay = new Random().nextInt(npcReactionTimeRange) + 1; // Random delay between 1 and npcReactionTimeRange seconds
-                ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-                scheduler.schedule(() -> {
-                    if (!isRaceFinished()) {
-                        Platform.runLater(() -> {
-                            player.grabSpoon();
-                            handleSpoonPick();
-                        });
-                    }
-                }, delay, TimeUnit.SECONDS);
-            }
-        }
-    }
-
     private void npcTurn() {
-        if (currentPlayer != null && !currentPlayer.getName().equals("Player 1")) {
-            Platform.runLater(() -> {
-                System.out.println("NPC Turn: " + currentPlayer.getName());
-                System.out.println("Current Hand Before: " + currentPlayer.getHand());
-
-                // Draw a card if needed
-                if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
-                    Card drawnCard = game.getDeck().drawCard();
-                    if (drawnCard != null) {
-                        currentPlayer.addCard(drawnCard);
-                        System.out.println(currentPlayer.getName() + " drew card: " + drawnCard);
-                        game.checkForMatchAndSpoon(currentPlayer);
-                    }
-                }
-
-                // Replace a card if there are more than 4 cards
-                if (currentPlayer.getHand().size() >= 4) {
-                    Card cardToReplace = selectBestCardToReplace(currentPlayer);
-                    System.out.println(currentPlayer.getName() + " replacing card: " + cardToReplace);
-                    currentPlayer.getHand().remove(cardToReplace);
-                    Card drawnCard = game.getDeck().drawCard();
-                    if (drawnCard != null) {
-                        currentPlayer.addCard(drawnCard);
-                        System.out.println(currentPlayer.getName() + " drew card: " + drawnCard);
-                        game.checkForMatchAndSpoon(currentPlayer);
-                    }
-                    System.out.println("New Hand After Replacement: " + currentPlayer.getHand());
-                    Platform.runLater(this::updateUI);
-                }
-
-                game.nextTurn();
-                currentPlayer = game.getCurrentPlayer();
-                turnLabel.setText("Next turn: " + currentPlayer.getName());
-
-                // Continue with the next NPC's turn
-                if (!currentPlayer.getName().equals("Player 1")) {
-                    npcTurn();
-                }
-            });
-        }
+        Platform.runLater(() -> game.nextTurn());
     }
 
     private Card selectBestCardToReplace(Player player) {
