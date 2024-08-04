@@ -40,16 +40,16 @@ public class SettingsUI {
 
     private void saveSettings(String selectedSpeed) {
         switch (selectedSpeed) {
-            case "1 second": gameSpeed = 1000; break;
-            case "2 seconds": gameSpeed = 2000; break;
-            case "3 seconds": gameSpeed = 3000; break;
-            case "4 seconds": gameSpeed = 4000; break;
-            case "5 seconds": gameSpeed = 5000; break;
-            case "6 seconds": gameSpeed = 6000; break;
-            case "7 seconds": gameSpeed = 7000; break;
-            case "8 seconds": gameSpeed = 8000; break;
-            case "9 seconds": gameSpeed = 9000; break;
-            case "10 seconds": gameSpeed = 10000; break;
+            case "1 second": gameSpeed = 1; break;
+            case "2 seconds": gameSpeed = 2; break;
+            case "3 seconds": gameSpeed = 3; break;
+            case "4 seconds": gameSpeed = 4; break;
+            case "5 seconds": gameSpeed = 5; break;
+            case "6 seconds": gameSpeed = 6; break;
+            case "7 seconds": gameSpeed = 7; break;
+            case "8 seconds": gameSpeed = 8; break;
+            case "9 seconds": gameSpeed = 9; break;
+            case "10 seconds": gameSpeed = 10; break;
         }
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("settings.txt"))) {
@@ -68,22 +68,22 @@ public class SettingsUI {
                 }
             }
         } catch (IOException e) {
-            gameSpeed = 5000; // default value
+            gameSpeed = 5; // default value
         }
     }
 
     private String getSpeedString() {
         switch (gameSpeed) {
-            case 1000: return "1 second";
-            case 2000: return "2 seconds";
-            case 3000: return "3 seconds";
-            case 4000: return "4 seconds";
-            case 5000: return "5 seconds";
-            case 6000: return "6 seconds";
-            case 7000: return "7 seconds";
-            case 8000: return "8 seconds";
-            case 9000: return "9 seconds";
-            case 10000: return "10 seconds";
+            case 1: return "1 second";
+            case 2: return "2 seconds";
+            case 3: return "3 seconds";
+            case 4: return "4 seconds";
+            case 5: return "5 seconds";
+            case 6: return "6 seconds";
+            case 7: return "7 seconds";
+            case 8: return "8 seconds";
+            case 9: return "9 seconds";
+            case 10: return "10 seconds";
             default: return "5 seconds";
         }
     }

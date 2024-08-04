@@ -37,12 +37,14 @@ public class GameUI {
     private boolean cheatMode = false;
     private boolean selectingReplacement = false;
     private Map<String, Image> cardImagesCache = new HashMap<>();
+    private int npcReactionTimeRange;
 
     private static final int CARD_WIDTH = 70;
     private static final int CARD_HEIGHT = 100;
 
-    public GameUI(Stage primaryStage) {
+    public GameUI(Stage primaryStage, int npcReactionTimeRange) {
         this.primaryStage = primaryStage;
+        this.npcReactionTimeRange = npcReactionTimeRange;
         setupGame();
     }
 
@@ -296,28 +298,49 @@ public class GameUI {
             }
         }
 
-        boolean playerOut = false;
-        for (Player player : game.getPlayers()) {
-            if (!player.hasSpoon()) {
-                game.removePlayer(player);
-                playerOut = true;
-                break;
-            }
-        }
-
-        if (playerOut) {
-            Platform.runLater(this::updateUI);
-            if (game.getPlayers().size() == 1) {
-                endGame();
-            } else {
-                game.startNewRound();
-                turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
-            }
+        if (isRaceFinished()) {
+            eliminatePlayersWithoutSpoons();
         } else {
             for (Player player : game.getPlayers()) {
                 player.resetSpoon();
             }
         }
+    }
+
+    private boolean isRaceFinished() {
+        return spoonsBox.getChildren().isEmpty();
+    }
+
+    private void eliminatePlayersWithoutSpoons() {
+        List<Player> eliminatedPlayers = new ArrayList<>();
+        for (Player player : game.getPlayers()) {
+            if (!player.hasSpoon()) {
+                eliminatedPlayers.add(player);
+            }
+        }
+
+        game.getPlayers().removeAll(eliminatedPlayers);
+
+        if (game.getPlayers().size() == 1) {
+            declareWinner(game.getPlayers().get(0));
+        } else {
+            showEliminationPopup(eliminatedPlayers);
+            game.startNewRound();
+            turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
+        }
+    }
+
+    private void showEliminationPopup(List<Player> eliminatedPlayers) {
+        StringBuilder message = new StringBuilder("The following players have been eliminated:\n");
+        for (Player player : eliminatedPlayers) {
+            message.append(player.getName()).append("\n");
+        }
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Elimination");
+        alert.setHeaderText(null);
+        alert.setContentText(message.toString());
+        alert.showAndWait();
     }
 
     private void endGame() {
@@ -327,6 +350,15 @@ public class GameUI {
         alert.setTitle("Game Over");
         alert.setHeaderText(null);
         alert.setContentText("Game Over! " + game.getPlayers().get(0).getName() + " wins!");
+        alert.showAndWait();
+        showMainMenu();
+    }
+
+    private void declareWinner(Player winner) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Game Over");
+        alert.setHeaderText(null);
+        alert.setContentText("Game Over! " + winner.getName() + " has won the game!");
         alert.showAndWait();
         showMainMenu();
     }
@@ -359,16 +391,37 @@ public class GameUI {
         if (currentPlayer.checkForMatch() || game.isRaceStarted()) {
             game.pickSpoon(currentPlayer);
             handleSpoonPick();
+
+            // Start the race for spoons
+            raceForSpoons();
         } else {
             showAlert("Cannot Grab Spoon", "You cannot grab a spoon without having four cards of the same suit or someone else grabbing a spoon.");
         }
     }
+
+    private void raceForSpoons() {
+        for (Player player : game.getPlayers()) {
+            if (!player.getName().equals("Player 1") && !player.hasSpoon()) {
+                int delay = new Random().nextInt(npcReactionTimeRange) + 1; // Random delay between 1 and npcReactionTimeRange seconds
+                ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+                scheduler.schedule(() -> {
+                    if (!isRaceFinished()) {
+                        Platform.runLater(() -> {
+                            player.grabSpoon();
+                            handleSpoonPick();
+                        });
+                    }
+                }, delay, TimeUnit.SECONDS);
+            }
+        }
+    }
+
     private void npcTurn() {
         if (currentPlayer != null && !currentPlayer.getName().equals("Player 1")) {
             Platform.runLater(() -> {
                 System.out.println("NPC Turn: " + currentPlayer.getName());
                 System.out.println("Current Hand Before: " + currentPlayer.getHand());
-                
+
                 // Draw a card if needed
                 if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
                     Card drawnCard = game.getDeck().drawCard();
@@ -378,9 +431,8 @@ public class GameUI {
                         game.checkForMatchAndSpoon(currentPlayer);
                     }
                 }
-    
+
                 // Replace a card if there are more than 4 cards
-                System.out.println(currentPlayer.getHand().size());
                 if (currentPlayer.getHand().size() >= 4) {
                     Card cardToReplace = selectBestCardToReplace(currentPlayer);
                     System.out.println(currentPlayer.getName() + " replacing card: " + cardToReplace);
@@ -394,11 +446,11 @@ public class GameUI {
                     System.out.println("New Hand After Replacement: " + currentPlayer.getHand());
                     Platform.runLater(this::updateUI);
                 }
-    
+
                 game.nextTurn();
                 currentPlayer = game.getCurrentPlayer();
                 turnLabel.setText("Next turn: " + currentPlayer.getName());
-    
+
                 // Continue with the next NPC's turn
                 if (!currentPlayer.getName().equals("Player 1")) {
                     npcTurn();
@@ -406,7 +458,6 @@ public class GameUI {
             });
         }
     }
-    
 
     private Card selectBestCardToReplace(Player player) {
         // Group cards by suit
