@@ -297,6 +297,31 @@ public class GameUI {
                 spoonsBox.getChildren().remove(0);
                 availableSpoons--;
                 System.out.println("Spoons after grab: " + availableSpoons);
+
+                if (game.isGameOver() && !game.getPlayers().get(0).hasSpoon()) {
+                    showGameOverMenu();
+                }
+            }
+        });
+    }
+
+    private void showGameOverMenu() {
+        Platform.runLater(() -> {
+            Alert gameOverAlert = new Alert(Alert.AlertType.INFORMATION);
+            gameOverAlert.setTitle("Game Over");
+            gameOverAlert.setHeaderText("You have lost!");
+            gameOverAlert.setContentText("You did not grab a spoon in time.");
+
+            ButtonType mainMenuButton = new ButtonType("Main Menu");
+            ButtonType quitButton = new ButtonType("Quit");
+
+            gameOverAlert.getButtonTypes().setAll(mainMenuButton, quitButton);
+
+            Optional<ButtonType> result = gameOverAlert.showAndWait();
+            if (result.isPresent() && result.get() == mainMenuButton) {
+                showMainMenu();
+            } else {
+                Platform.exit();
             }
         });
     }

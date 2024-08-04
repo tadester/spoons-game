@@ -118,13 +118,23 @@ public class Game {
 
         if (eliminatedPlayer != null) {
             removePlayer(eliminatedPlayer);
+            handlePlayerOneElimination();
         }
 
         if (players.size() == 1) {
             gameOver = true;
             System.out.println("Game Over! " + players.get(0).getName() + " wins!");
-        } else {
+        } else if (!gameOver) {
             startNewRound();
+        }
+    }
+
+    public void handlePlayerOneElimination() {
+        if (currentPlayer.getName().equals("Player 1") && !currentPlayer.hasSpoon()) {
+            gameOver = true;
+            if (onSpoonTakenCallback != null) {
+                onSpoonTakenCallback.run();
+            }
         }
     }
 
