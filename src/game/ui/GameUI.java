@@ -11,11 +11,11 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.Label;
-import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,6 +42,8 @@ public class GameUI {
     private boolean cheatMode = false;
     private boolean selectingReplacement = false;
     private Map<String, Image> cardImagesCache = new HashMap<>();
+
+    private VBox overlay;  // Overlay for selecting cards
 
     private static final int CARD_WIDTH = 70;
     private static final int CARD_HEIGHT = 100;
@@ -117,11 +119,7 @@ public class GameUI {
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
         Button selectCardButton = new Button("Select Card to Replace");
-        selectCardButton.setOnAction(e -> {
-            showAlert("Replace Card", "Click the card you want to replace.");
-            selectingReplacement = true;
-            System.out.println("Select Card to Replace button clicked. selectingReplacement set to true.");
-        });
+        selectCardButton.setOnAction(e -> showReplacementOverlay());
 
         Button confirmReplaceButton = new Button("Confirm Replace");
         confirmReplaceButton.setOnAction(e -> confirmReplaceCard());
@@ -135,9 +133,85 @@ public class GameUI {
         buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, selectCardButton, confirmReplaceButton, cheatButton, pauseButton);
         root.getChildren().add(buttonsBox);
 
+        createOverlay(); // Create the overlay UI
+
         startExecutor();
 
         return root;
+    }
+
+    private void createOverlay() {
+        overlay = new VBox(10);
+        overlay.setAlignment(Pos.CENTER);
+        overlay.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+        overlay.setStyle("-fx-border-color: black; -fx-border-width: 2px;");
+
+        // Hide overlay by default
+        overlay.setVisible(false);
+        overlay.setManaged(false);
+
+        root.getChildren().add(overlay); // Add overlay to root
+
+        Button confirmButton = new Button("Confirm Replace");
+        confirmButton.setOnAction(e -> confirmReplaceCard());
+        overlay.getChildren().add(confirmButton); // Add the confirm button to the overlay
+    }
+
+    private void showReplacementOverlay() {
+        selectingReplacement = true;
+        overlay.getChildren().clear(); // Clear previous content
+
+        HBox cardsBox = new HBox(10);
+        cardsBox.setAlignment(Pos.CENTER);
+
+        for (Card card : currentPlayer.getHand()) {
+            ImageView cardImageView = createCardImageView(card);
+            cardsBox.getChildren().add(cardImageView);
+        }
+
+        overlay.getChildren().addAll(cardsBox, new Button("Confirm Replace")); // Add cards and confirm button to overlay
+        overlay.setVisible(true);
+        overlay.setManaged(true);
+    }
+
+    private void setupGame() {
+        List<Player> players = new ArrayList<>();
+        players.add(new Player("Player 1"));
+        players.add(new Player("Player 2"));
+        players.add(new Player("Player 3"));
+        players.add(new Player("Player 4"));
+
+        game = new Game(players);
+        currentPlayer = players.get(0);
+        game.startNPCPlayers();
+    }
+
+    private void drawCard() {
+        if (game.isGameOver()) return;
+
+        if (currentPlayer.getName().equals("Player 1")) {
+            if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
+                Card drawnCard = game.getDeck().drawCard();
+                if (drawnCard != null) {
+                    if (currentPlayer.getHand().size() < 4) {
+                        currentPlayer.addCard(drawnCard);
+                    } else {
+                        selectedCard = drawnCard;
+                    }
+                    Platform.runLater(this::updateUI);
+                    game.checkForMatchAndSpoon(currentPlayer);
+
+                    // Move to next player
+                    game.nextTurn();
+                    currentPlayer = game.getCurrentPlayer();
+                    turnLabel.setText("Turn: " + currentPlayer.getName());
+                } else {
+                    endGame();
+                }
+            }
+        } else {
+            showAlert("Not Your Turn", "Please wait for your turn to draw a card.");
+        }
     }
 
     private VBox createPlayerBox(Player player) {
@@ -165,9 +239,6 @@ public class GameUI {
 
         playerBox.getChildren().addAll(label, handBox, spoonImage);
 
-        // Do not consume the event here, just log it
-        playerBox.setOnMouseClicked(e -> System.out.println("PlayerBox VBox clicked: " + player.getName()));
-
         return playerBox;
     }
 
@@ -176,12 +247,11 @@ public class GameUI {
         cardImageView.setFitHeight(CARD_HEIGHT);
         cardImageView.setFitWidth(CARD_WIDTH);
 
-        // Setting the event handler for the image
         cardImageView.setOnMouseClicked(e -> {
-            System.out.println("Card image clicked: " + card); // Ensure this is printed
-            e.consume(); // Prevent event propagation
-            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;"); // Highlight to confirm click
-            selectedCard = card; // Set the selected card
+            System.out.println("Card image clicked: " + card);
+            e.consume();
+            cardImageView.setStyle("-fx-border-color: yellow; -fx-border-width: 2px;");
+            selectedCard = card;
         });
 
         return cardImageView;
@@ -195,10 +265,11 @@ public class GameUI {
             Card newCard = game.getDeck().drawCard();
             currentPlayer.addCard(newCard);
             Platform.runLater(this::updateUI);
-            selectedCard = null; // Reset after confirming replacement
+            selectedCard = null;
             selectingReplacement = false;
+            overlay.setVisible(false);
+            overlay.setManaged(false);
             System.out.println("Card replaced successfully.");
-            // Move to next player
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
@@ -246,9 +317,7 @@ public class GameUI {
 
     private void startExecutor() {
         executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(() -> {
-            Platform.runLater(this::updateUI);
-        }, 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
+        executor.scheduleAtFixedRate(() -> Platform.runLater(this::updateUI), 0, 33, TimeUnit.MILLISECONDS); // 30 FPS
     }
 
     private void stopExecutor() {
