@@ -257,29 +257,20 @@ public class GameUI {
             Player player = game.getPlayers().get(i);
             HBox handBox = playerHands.get(i);
             handBox.getChildren().clear();
-            if (player.getName().equals("Player 1")) {
-                for (Card card : player.getHand()) {
-                    ImageView cardImageView = createCardImageView(card);
-                    handBox.getChildren().add(cardImageView);
+            for (int j = 0; j < player.getHand().size(); j++) {
+                Card card = player.getHand().get(j);
+                ImageView cardImage;
+                if (cheatMode || player.getName().equals("Player 1")) {
+                    cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+                } else {
+                    cardImage = new ImageView(loadImage("file:src/images/card_back.png"));
                 }
-            } else {
-                for (int j = 0; j < player.getHand().size(); j++) {
-                    Card card = player.getHand().get(j);
-                    ImageView cardImage;
-                    if (cheatMode) {
-                        cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-                    } else {
-                        cardImage = new ImageView(loadImage("file:src/images/card_back.png"));
-                    }
-                    cardImage.setFitHeight(CARD_HEIGHT);
-                    cardImage.setFitWidth(CARD_WIDTH);
-                    handBox.getChildren().add(cardImage);
-                }
+                cardImage.setFitHeight(CARD_HEIGHT);
+                cardImage.setFitWidth(CARD_WIDTH);
+                handBox.getChildren().add(cardImage);
             }
-
             playerSpoons.get(i).setVisible(player.hasSpoon());
         }
-
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
     }
 
@@ -372,56 +363,50 @@ public class GameUI {
             showAlert("Cannot Grab Spoon", "You cannot grab a spoon without having four cards of the same suit or someone else grabbing a spoon.");
         }
     }
-
-    private void showAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
-    }
-
-    private Image loadImage(String path) {
-        if (!cardImagesCache.containsKey(path)) {
-            cardImagesCache.put(path, new Image(path));
-        }
-        return cardImagesCache.get(path);
-    }
-
     private void npcTurn() {
         if (currentPlayer != null && !currentPlayer.getName().equals("Player 1")) {
             Platform.runLater(() -> {
                 System.out.println("NPC Turn: " + currentPlayer.getName());
-                System.out.println("Current Hand: " + currentPlayer.getHand());
-
+                System.out.println("Current Hand Before: " + currentPlayer.getHand());
+                
+                // Draw a card if needed
                 if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
                     Card drawnCard = game.getDeck().drawCard();
                     if (drawnCard != null) {
                         currentPlayer.addCard(drawnCard);
                         System.out.println(currentPlayer.getName() + " drew card: " + drawnCard);
                         game.checkForMatchAndSpoon(currentPlayer);
-
-                        // If the hand size exceeds 4 after the draw, replace the card
-                        if (currentPlayer.getHand().size() > 4) {
-                            Card cardToReplace = selectBestCardToReplace(currentPlayer);
-                            System.out.println(currentPlayer.getName() + " replacing card: " + cardToReplace);
-                            currentPlayer.getHand().remove(cardToReplace);
-                            System.out.println("New Hand: " + currentPlayer.getHand());
-                            Platform.runLater(this::updateUI);
-                        }
                     }
                 }
-
+    
+                // Replace a card if there are more than 4 cards
+                System.out.println(currentPlayer.getHand().size());
+                if (currentPlayer.getHand().size() >= 4) {
+                    Card cardToReplace = selectBestCardToReplace(currentPlayer);
+                    System.out.println(currentPlayer.getName() + " replacing card: " + cardToReplace);
+                    currentPlayer.getHand().remove(cardToReplace);
+                    Card drawnCard = game.getDeck().drawCard();
+                    if (drawnCard != null) {
+                        currentPlayer.addCard(drawnCard);
+                        System.out.println(currentPlayer.getName() + " drew card: " + drawnCard);
+                        game.checkForMatchAndSpoon(currentPlayer);
+                    }
+                    System.out.println("New Hand After Replacement: " + currentPlayer.getHand());
+                    Platform.runLater(this::updateUI);
+                }
+    
                 game.nextTurn();
                 currentPlayer = game.getCurrentPlayer();
                 turnLabel.setText("Next turn: " + currentPlayer.getName());
-
+    
+                // Continue with the next NPC's turn
                 if (!currentPlayer.getName().equals("Player 1")) {
-                    npcTurn(); // Continue with the next NPC's turn
+                    npcTurn();
                 }
             });
         }
     }
+    
 
     private Card selectBestCardToReplace(Player player) {
         // Group cards by suit
@@ -473,5 +458,22 @@ public class GameUI {
         Scene dialogScene = new Scene(dialogVbox, 400, 300);
         dialog.setScene(dialogScene);
         dialog.show();
+    }
+
+    // Method to load images and cache them
+    private Image loadImage(String path) {
+        if (!cardImagesCache.containsKey(path)) {
+            cardImagesCache.put(path, new Image(path));
+        }
+        return cardImagesCache.get(path);
+    }
+
+    // Method to show alerts
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }
