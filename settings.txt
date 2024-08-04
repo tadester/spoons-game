@@ -1,1 +1,1 @@
-gameSpeed=2000
+gameSpeed=10

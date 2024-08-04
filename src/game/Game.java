@@ -8,11 +8,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.function.Consumer;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.io.*;
 
 public class Game {
     private final List<Player> players;
@@ -26,9 +22,7 @@ public class Game {
     private int gameSpeed;
     private Random random;
     private Player currentPlayer;
-    private Consumer<Void> onPlayerOutCallback;
     private Runnable onSpoonTakenCallback;
-    private Runnable updateUICallback; // Add this callback
 
     public Game(List<Player> players) {
         this.players = players;
@@ -41,11 +35,7 @@ public class Game {
         this.initialDrawComplete = false;
         this.random = new Random();
         this.currentPlayer = players.get(currentPlayerIndex);  // Set initial player
-    }
-
-    // Setter for the UI update callback
-    public void setUpdateUICallback(Runnable callback) {
-        this.updateUICallback = callback;
+        loadSettings();
     }
 
     public Deck getDeck() {
@@ -64,31 +54,15 @@ public class Game {
         return raceStarted;
     }
 
-    public boolean isGameOver() {
-        return gameOver;
-    }
-
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
-    }
-
     public void setOnSpoonTakenCallback(Runnable callback) {
         this.onSpoonTakenCallback = callback;
-    }
-
-    public void setOnPlayerOutCallback(Consumer<Void> callback) {
-        this.onPlayerOutCallback = callback;
     }
 
     public void checkForMatchAndSpoon(Player player) {
         if (player.checkForMatch()) {
             if (!raceStarted) {
                 raceStarted = true;
-                player.grabSpoon();
-                numSpoons--;  // Deduct spoon
-                if (onSpoonTakenCallback != null) {
-                    onSpoonTakenCallback.run();
-                }
+                pickSpoon(player);
                 startRaceTimer();
             }
         }
@@ -113,40 +87,44 @@ public class Game {
             @Override
             public void run() {
                 if (!gameOver && !player.hasSpoon()) {
-                    player.grabSpoon();
-                    numSpoons--;  // Deduct spoon
-                    if (onSpoonTakenCallback != null) {
-                        onSpoonTakenCallback.run();
-                    }
-                    handleSpoonPick(player);
+                    pickSpoon(player);
                 }
             }
         }, delay);
     }
 
     public void pickSpoon(Player player) {
-        player.grabSpoon();
-        numSpoons--;  // Deduct spoon
-        if (onSpoonTakenCallback != null) {
-            onSpoonTakenCallback.run();
+        if (numSpoons > 0 && !player.hasSpoon()) {
+            player.grabSpoon();
+            numSpoons--;
+            if (onSpoonTakenCallback != null) {
+                onSpoonTakenCallback.run();
+            }
+            if (numSpoons == 0) {
+                handleSpoonPick();
+            }
         }
-        handleSpoonPick(player);
     }
 
-    private void handleSpoonPick(Player currentPlayer) {
-        if (numSpoons == 0) {
-            eliminatePlayersWithoutSpoons();
-            if (players.size() > 1) {
-                startNewRound();
-            } else {
-                gameOver = true;
-                if (players.get(0).getName().equals("Player 1")) {
-                    if (onPlayerOutCallback != null) {
-                        onPlayerOutCallback.accept(null);
-                    }
-                }
-                System.out.println("Game Over! " + players.get(0).getName() + " wins!");
+    private void handleSpoonPick() {
+        // Eliminate the player who didn't pick a spoon
+        Player eliminatedPlayer = null;
+        for (Player player : players) {
+            if (!player.hasSpoon()) {
+                eliminatedPlayer = player;
+                break;
             }
+        }
+
+        if (eliminatedPlayer != null) {
+            removePlayer(eliminatedPlayer);
+        }
+
+        if (players.size() == 1) {
+            gameOver = true;
+            System.out.println("Game Over! " + players.get(0).getName() + " wins!");
+        } else {
+            startNewRound();
         }
     }
 
@@ -165,17 +143,24 @@ public class Game {
         currentPlayer = players.get(currentPlayerIndex);
     }
 
-    public void eliminatePlayersWithoutSpoons() {
-        players.removeIf(player -> !player.hasSpoon());
+    public void removePlayer(Player player) {
+        System.out.println("Removing player: " + player.getName());
+        players.remove(player);
+        numSpoons--;
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
     }
 
     public void nextTurn() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
         currentPlayer = players.get(currentPlayerIndex);  // Update current player
         System.out.println("Next turn: " + currentPlayer.getName());
-        if (updateUICallback != null) {
-            updateUICallback.run();
-        }
         if (!currentPlayer.getName().equals("Player 1")) {
             npcDrawCard(currentPlayer);
         }
@@ -225,5 +210,18 @@ public class Game {
         }
         initialDrawComplete = true;
         return true;
+    }
+
+    private void loadSettings() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("settings.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("gameSpeed=")) {
+                    gameSpeed = Integer.parseInt(line.split("=")[1]);
+                }
+            }
+        } catch (IOException e) {
+            gameSpeed = 5000; // default value
+        }
     }
 }

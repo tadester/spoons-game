@@ -23,11 +23,14 @@ public class MenuUI {
 
         Button startButton = new Button("Start Game");
         startButton.setOnAction(e -> startGame());
+        
+        Button aboutButton = new Button("About");
+        aboutButton.setOnAction(e -> showAbout());
 
         Button settingsButton = new Button("Settings");
         settingsButton.setOnAction(e -> showSettings());
 
-        root.getChildren().addAll(startButton, settingsButton);
+        root.getChildren().addAll(startButton,aboutButton, settingsButton);
         return root;
     }
 
