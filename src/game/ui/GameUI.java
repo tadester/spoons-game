@@ -119,7 +119,15 @@ public class GameUI {
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
         Button selectCardButton = new Button("Select Card to Replace");
-        selectCardButton.setOnAction(e -> showReplacementOverlay());
+        selectCardButton.setOnAction(e -> {
+            if (currentPlayer.getName().equals("Player 1")) {
+                showReplacementOverlay();
+                System.out.println("Select Card to Replace button clicked. selectingReplacement set to true.");
+            } else {
+                showAlert("Not Your Turn", "It's not your turn to replace a card.");
+                System.out.println("Select Card to Replace button clicked outside Player 1's turn.");
+            }
+        });
 
         Button confirmReplaceButton = new Button("Confirm Replace");
         confirmReplaceButton.setOnAction(e -> confirmReplaceCard());
