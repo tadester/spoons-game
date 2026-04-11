@@ -4,6 +4,7 @@ import game.Game;
 import game.cards.Card;
 import game.players.Player;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -23,21 +24,22 @@ import java.util.concurrent.TimeUnit;
 
 public class GameUI {
 
-    private Game game;
-    private List<Label> playerLabels;
-    private List<HBox> playerHands;
-    private List<ImageView> playerSpoons;
+    private final Game game;
+    private final List<Label> playerLabels;
+    private final List<HBox> playerHands;
+    private final List<ImageView> playerSpoons;
     private VBox root;
     private Player currentPlayer;
     private Card selectedCard = null;
     private ScheduledExecutorService executor;
     private HBox spoonsBox;
-    private Stage primaryStage;
+    private final Stage primaryStage;
     private Label turnLabel;
+    private Label hintLabel;
     private boolean cheatMode = false;
     private boolean selectingReplacement = false;
-    private Map<String, Image> cardImagesCache = new HashMap<>();
-    private int npcReactionTimeRange;
+    private final Map<String, Image> cardImagesCache = new HashMap<>();
+    private final int npcReactionTimeRange;
     private int availableSpoons;  // Track the number of available spoons
 
     private static final int CARD_WIDTH = 70;
@@ -46,77 +48,104 @@ public class GameUI {
     public GameUI(Stage primaryStage, int npcReactionTimeRange) {
         this.primaryStage = primaryStage;
         this.npcReactionTimeRange = npcReactionTimeRange;
-        setupGame();
+        playerLabels = new ArrayList<>();
+        playerHands = new ArrayList<>();
+        playerSpoons = new ArrayList<>();
+        game = setupGame();
     }
 
     public VBox createContent() {
-        root = new VBox(10);
-        root.setAlignment(Pos.CENTER);
-        root.setBackground(new Background(new BackgroundFill(Color.LIGHTBLUE, null, null)));
+        root = new VBox(18);
+        root.setAlignment(Pos.TOP_CENTER);
+        root.getStyleClass().addAll("screen", "game-screen");
+
+        VBox headerBox = new VBox(8);
+        headerBox.setAlignment(Pos.CENTER);
+        headerBox.getStyleClass().add("hud-panel");
+
+        Label titleLabel = new Label("Spoons Table");
+        titleLabel.getStyleClass().add("hud-title");
+
+        turnLabel = new Label("Turn: " + game.getCurrentPlayer().getName());
+        turnLabel.getStyleClass().add("status-pill");
+
+        hintLabel = new Label("Collect four cards of the same rank, then grab a spoon.");
+        hintLabel.getStyleClass().add("hud-subtitle");
+        hintLabel.setWrapText(true);
+        hintLabel.setMaxWidth(520);
+
+        headerBox.getChildren().addAll(titleLabel, turnLabel, hintLabel);
 
         StackPane gameBoard = new StackPane();
         gameBoard.setAlignment(Pos.CENTER);
-
-        VBox centerBox = new VBox(10);
-        centerBox.setAlignment(Pos.CENTER);
+        gameBoard.getStyleClass().add("table-surface");
 
         spoonsBox = new HBox(10);
         spoonsBox.setAlignment(Pos.CENTER);
+        spoonsBox.getStyleClass().add("spoons-row");
         availableSpoons = game.getPlayers().size() - 1; // Initialize available spoons
 
         for (int i = 0; i < availableSpoons; i++) {
             ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
             spoonImage.setFitHeight(50);
             spoonImage.setFitWidth(50);
+            spoonImage.getStyleClass().add("spoon-icon");
             spoonsBox.getChildren().add(spoonImage);
         }
 
         ImageView deckImage = new ImageView(loadImage("file:src/images/card_back.png"));
         deckImage.setFitHeight(CARD_HEIGHT);
         deckImage.setFitWidth(CARD_WIDTH);
+        deckImage.getStyleClass().add("center-deck");
         deckImage.setOnMouseClicked(e -> drawCard());
 
-        centerBox.getChildren().addAll(deckImage, spoonsBox);
+        Label deckLabel = new Label("Draw Pile");
+        deckLabel.getStyleClass().add("mini-label");
 
-        gameBoard.getChildren().add(centerBox);
+        VBox centerBox = new VBox(14, deckLabel, deckImage, spoonsBox);
+        centerBox.setAlignment(Pos.CENTER);
+
+        StackPane centerOrb = new StackPane(centerBox);
+        centerOrb.getStyleClass().add("center-orb");
+        centerOrb.setPadding(new Insets(28));
+        gameBoard.getChildren().add(centerOrb);
 
         BorderPane board = new BorderPane();
-
-        playerLabels = new ArrayList<>();
-        playerHands = new ArrayList<>();
-        playerSpoons = new ArrayList<>();
+        board.setPadding(new Insets(24));
+        board.getStyleClass().add("game-board");
 
         for (Player player : game.getPlayers()) {
             VBox playerBox = createPlayerBox(player);
 
             if (player.getName().equals("Player 1")) {
                 board.setBottom(playerBox);
+                BorderPane.setMargin(playerBox, new Insets(18, 0, 0, 0));
             } else if (player.getName().equals("Player 2")) {
                 board.setLeft(playerBox);
+                BorderPane.setMargin(playerBox, new Insets(0, 18, 0, 0));
             } else if (player.getName().equals("Player 3")) {
                 board.setTop(playerBox);
+                BorderPane.setMargin(playerBox, new Insets(0, 0, 18, 0));
             } else if (player.getName().equals("Player 4")) {
                 board.setRight(playerBox);
+                BorderPane.setMargin(playerBox, new Insets(0, 0, 0, 18));
             }
         }
 
         board.setCenter(gameBoard);
-        root.getChildren().add(board);
+        VBox.setVgrow(board, Priority.ALWAYS);
 
-        turnLabel = new Label();
-        turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
-        root.getChildren().add(turnLabel);
-
-        HBox buttonsBox = new HBox(10);
+        HBox buttonsBox = new HBox(12);
         buttonsBox.setAlignment(Pos.CENTER);
+        buttonsBox.getStyleClass().add("controls-bar");
 
-        Button drawCardButton = new Button("Draw Card");
+        Button drawCardButton = createActionButton("Draw Card", "primary-button");
         drawCardButton.setOnAction(e -> drawCard());
 
-        Button pickSpoonButton = new Button("Pick Spoon");
+        Button pickSpoonButton = createActionButton("Grab Spoon", "accent-button");
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
-        Button selectCardButton = new Button("Select Card to Replace");
+        Button selectCardButton = createActionButton("Choose Replace", "secondary-button");
         selectCardButton.setOnAction(e -> {
             if (currentPlayer.getName().equals("Player 1")) {
                 showReplacementMenu();
@@ -125,34 +154,36 @@ public class GameUI {
             }
         });
 
-        Button confirmReplaceButton = new Button("Confirm Replace");
+        Button confirmReplaceButton = createActionButton("Confirm Replace", "secondary-button");
         confirmReplaceButton.setOnAction(e -> confirmReplaceCard());
 
-        Button cheatButton = new Button("Cheat");
+        Button cheatButton = createActionButton("Cheat View", "ghost-button");
         cheatButton.setOnAction(e -> toggleCheatMode());
 
-        Button pauseButton = new Button("Pause");
+        Button pauseButton = createActionButton("Pause", "ghost-button");
         pauseButton.setOnAction(e -> showPauseMenu());
 
         buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, selectCardButton, confirmReplaceButton, cheatButton, pauseButton);
-        root.getChildren().add(buttonsBox);
+        root.getChildren().addAll(headerBox, board, buttonsBox);
 
         startExecutor();
+        updateUI();
 
         return root;
     }
 
-    private void setupGame() {
+    private Game setupGame() {
         List<Player> players = new ArrayList<>();
         players.add(new Player("Player 1"));
         players.add(new Player("Player 2"));
         players.add(new Player("Player 3"));
         players.add(new Player("Player 4"));
 
-        game = new Game(players);
+        Game newGame = new Game(players);
         currentPlayer = players.get(0);
-        game.setOnSpoonTakenCallback(this::updateSpoons);
-        game.startNPCPlayers();
+        newGame.setOnSpoonTakenCallback(this::updateSpoons);
+        newGame.startNPCPlayers();
+        return newGame;
     }
 
     private void drawCard() {
@@ -187,14 +218,18 @@ public class GameUI {
     }
 
     private VBox createPlayerBox(Player player) {
-        VBox playerBox = new VBox(5);
+        VBox playerBox = new VBox(8);
         playerBox.setAlignment(Pos.CENTER);
+        playerBox.getStyleClass().add(player.getName().equals("Player 1") ? "player-panel-self" : "player-panel");
+        playerBox.setPrefWidth(player.getName().equals("Player 1") ? 540 : 190);
 
         Label label = new Label(player.getName());
+        label.getStyleClass().add("player-name");
         playerLabels.add(label);
 
         HBox handBox = new HBox(5);
         handBox.setAlignment(Pos.CENTER);
+        handBox.getStyleClass().add("player-hand");
 
         // Set rotation based on player position
         if (player.getName().equals("Player 2") || player.getName().equals("Player 4")) {
@@ -207,6 +242,7 @@ public class GameUI {
         ImageView spoonImage = new ImageView(loadImage("file:src/images/spoon.png"));
         spoonImage.setFitHeight(30);
         spoonImage.setFitWidth(30);
+        spoonImage.getStyleClass().add("player-spoon");
         spoonImage.setVisible(false);
         playerSpoons.add(spoonImage);
 
@@ -219,6 +255,7 @@ public class GameUI {
         ImageView cardImageView = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
         cardImageView.setFitHeight(CARD_HEIGHT);
         cardImageView.setFitWidth(CARD_WIDTH);
+        cardImageView.getStyleClass().add("play-card");
 
         cardImageView.setOnMouseClicked(e -> {
             System.out.println("Card image clicked: " + card);
@@ -273,11 +310,15 @@ public class GameUI {
                 }
                 cardImage.setFitHeight(CARD_HEIGHT);
                 cardImage.setFitWidth(CARD_WIDTH);
+                cardImage.getStyleClass().add("play-card");
                 handBox.getChildren().add(cardImage);
             }
             playerSpoons.get(i).setVisible(player.hasSpoon());
         }
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
+        hintLabel.setText(game.isRaceStarted()
+            ? "Spoon race active. Grab one now."
+            : "Collect four cards of the same rank, then grab a spoon.");
     }
 
     private void startExecutor() {
@@ -446,7 +487,7 @@ public class GameUI {
     }
 
     private void showMainMenu() {
-        primaryStage.setScene(new Scene(new MenuUI(primaryStage).createContent(), 800, 600));
+        primaryStage.setScene(SceneFactory.createScene(new MenuUI(primaryStage).createContent()));
     }
 
     private void showPauseMenu() {
@@ -477,7 +518,7 @@ public class GameUI {
             // Start the race for spoons
             raceForSpoons(currentPlayer);
         } else {
-            showAlert("Cannot Grab Spoon", "You cannot grab a spoon without having four cards of the same suit or someone else grabbing a spoon.");
+            showAlert("Cannot Grab Spoon", "You cannot grab a spoon until you have four cards of the same rank or another player starts the spoon race.");
         }
     }
 
@@ -527,26 +568,24 @@ public class GameUI {
     }
 
     private Card selectBestCardToReplace(Player player) {
-        // Group cards by suit
-        Map<String, List<Card>> cardsBySuit = new HashMap<>();
+        // Group cards by rank so NPCs chase four-of-a-kind.
+        Map<String, List<Card>> cardsByValue = new HashMap<>();
         for (Card card : player.getHand()) {
-            cardsBySuit.putIfAbsent(card.getSuit(), new ArrayList<>());
-            cardsBySuit.get(card.getSuit()).add(card);
+            cardsByValue.putIfAbsent(card.getValue(), new ArrayList<>());
+            cardsByValue.get(card.getValue()).add(card);
         }
 
-        // Find the suit with the most cards
-        String targetSuit = cardsBySuit.entrySet().stream()
+        String targetValue = cardsByValue.entrySet().stream()
                 .max(Comparator.comparingInt(entry -> entry.getValue().size()))
                 .map(Map.Entry::getKey)
                 .orElse(null);
 
-        System.out.println(player.getName() + " targeting suit: " + targetSuit);
+        System.out.println(player.getName() + " targeting rank: " + targetValue);
 
-        // Replace a card that is not of the target suit
         return player.getHand().stream()
-                .filter(card -> !card.getSuit().equals(targetSuit))
+                .filter(card -> !card.getValue().equals(targetValue))
                 .findFirst()
-                .orElse(player.getHand().get(0)); // If all cards are the same suit, just return the first one
+                .orElse(player.getHand().get(0));
     }
 
     private void showReplacementMenu() {
@@ -576,6 +615,12 @@ public class GameUI {
         Scene dialogScene = new Scene(dialogVbox, 400, 300);
         dialog.setScene(dialogScene);
         dialog.show();
+    }
+
+    private Button createActionButton(String text, String styleClass) {
+        Button button = new Button(text);
+        button.getStyleClass().add(styleClass);
+        return button;
     }
 
     // Method to load images and cache them

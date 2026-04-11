@@ -1,17 +1,15 @@
 package game;
 
 import javafx.application.Application;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
 import game.ui.MenuUI;
+import game.ui.SceneFactory;
 
 public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         MenuUI menuUI = new MenuUI(primaryStage);
-        Scene scene = new Scene(menuUI.createContent(), 800, 600);
-        scene.getStylesheets().add("file:src/game/styles.css");
-        primaryStage.setScene(scene);
+        primaryStage.setScene(SceneFactory.createScene(menuUI.createContent()));
         primaryStage.setTitle("Spoons Game");
         primaryStage.show();
     }

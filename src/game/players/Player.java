@@ -31,9 +31,9 @@ public class Player {
 
     public boolean checkForMatch() {
         if (hand.size() < 4) return false;
-        String suit = hand.get(0).getSuit();
+        String value = hand.get(0).getValue();
         for (Card card : hand) {
-            if (!card.getSuit().equals(suit)) {
+            if (!card.getValue().equals(value)) {
                 return false;
             }
         }

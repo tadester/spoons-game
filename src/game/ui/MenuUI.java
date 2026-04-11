@@ -1,15 +1,15 @@
 package game.ui;
 
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class MenuUI {
 
-    private Stage primaryStage;
-    private int gameSpeed;
+    private final Stage primaryStage;
+    private final int gameSpeed;
 
     public MenuUI(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -18,32 +18,46 @@ public class MenuUI {
     }
 
     public VBox createContent() {
-        VBox root = new VBox(10);
+        VBox root = new VBox(18);
         root.setAlignment(Pos.CENTER);
+        root.getStyleClass().add("screen");
+
+        Label titleLabel = new Label("Spoons");
+        titleLabel.getStyleClass().add("screen-title");
+
+        Label subtitleLabel = new Label("Grab four-of-a-kind, then grab a spoon before the table beats you to it.");
+        subtitleLabel.getStyleClass().add("lead-text");
+        subtitleLabel.setWrapText(true);
+        subtitleLabel.setMaxWidth(520);
 
         Button startButton = new Button("Start Game");
+        startButton.getStyleClass().add("primary-button");
         startButton.setOnAction(e -> startGame());
-        
-        Button aboutButton = new Button("About");
+
+        Button aboutButton = new Button("How to Play");
+        aboutButton.getStyleClass().add("secondary-button");
         aboutButton.setOnAction(e -> showAbout());
 
         Button settingsButton = new Button("Settings");
+        settingsButton.getStyleClass().add("secondary-button");
         settingsButton.setOnAction(e -> showSettings());
 
-        root.getChildren().addAll(startButton,aboutButton, settingsButton);
+        root.getChildren().addAll(titleLabel, subtitleLabel, startButton, aboutButton, settingsButton);
         return root;
     }
 
     private void startGame() {
         GameUI gameUI = new GameUI(primaryStage, gameSpeed); // Pass gameSpeed to GameUI
-        primaryStage.setScene(new Scene(gameUI.createContent(), 800, 600));
+        primaryStage.setScene(SceneFactory.createScene(gameUI.createContent()));
     }
+
     private void showAbout() {
         AboutUI aboutUI = new AboutUI(primaryStage);
-        primaryStage.setScene(new Scene(aboutUI.createContent(), 800, 600));
+        primaryStage.setScene(SceneFactory.createScene(aboutUI.createContent()));
     }
+
     private void showSettings() {
         SettingsUI settingsUI = new SettingsUI(primaryStage);
-        primaryStage.setScene(new Scene(settingsUI.createContent(), 800, 600));
+        primaryStage.setScene(SceneFactory.createScene(settingsUI.createContent()));
     }
 }

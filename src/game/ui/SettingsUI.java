@@ -1,9 +1,9 @@
 package game.ui;
 
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -11,7 +11,7 @@ import java.io.*;
 
 public class SettingsUI {
 
-    private Stage primaryStage;
+    private final Stage primaryStage;
     private int gameSpeed;
 
     public SettingsUI(Stage primaryStage) {
@@ -20,21 +20,32 @@ public class SettingsUI {
     }
 
     public VBox createContent() {
-        VBox root = new VBox(10);
+        VBox root = new VBox(18);
         root.setAlignment(Pos.CENTER);
+        root.getStyleClass().add("screen");
+
+        Label titleLabel = new Label("Settings");
+        titleLabel.getStyleClass().add("screen-title");
+
+        Label descriptionLabel = new Label("Choose how quickly the computer players react during the game.");
+        descriptionLabel.getStyleClass().add("lead-text");
+        descriptionLabel.setWrapText(true);
+        descriptionLabel.setMaxWidth(520);
 
         ComboBox<String> speedComboBox = new ComboBox<>();
         speedComboBox.getItems().addAll("1 second", "2 seconds", "3 seconds", "4 seconds", "5 seconds", "6 seconds", "7 seconds", "8 seconds", "9 seconds", "10 seconds");
         speedComboBox.setValue(getSpeedString());
+        speedComboBox.getStyleClass().add("speed-select");
 
         Button saveButton = new Button("Save");
+        saveButton.getStyleClass().add("primary-button");
         saveButton.setOnAction(e -> {
             String selectedSpeed = speedComboBox.getValue();
             saveSettings(selectedSpeed);
             goToMainMenu();
         });
 
-        root.getChildren().addAll(speedComboBox, saveButton);
+        root.getChildren().addAll(titleLabel, descriptionLabel, speedComboBox, saveButton);
         return root;
     }
 
@@ -89,7 +100,7 @@ public class SettingsUI {
     }
 
     private void goToMainMenu() {
-        primaryStage.setScene(new Scene(new MenuUI(primaryStage).createContent(), 800, 600));
+        primaryStage.setScene(SceneFactory.createScene(new MenuUI(primaryStage).createContent()));
     }
 
     public int getGameSpeed() {
