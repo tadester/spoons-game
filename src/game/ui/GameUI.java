@@ -3,6 +3,10 @@ package game.ui;
 import game.Game;
 import game.cards.Card;
 import game.players.Player;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.ScaleTransition;
+import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,9 +17,9 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.Label;
+import javafx.util.Duration;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -36,11 +40,18 @@ public class GameUI {
     private final Stage primaryStage;
     private Label turnLabel;
     private Label hintLabel;
+    private Label pendingCardLabel;
+    private StackPane pendingCardSlot;
+    private ImageView pendingCardView;
     private boolean cheatMode = false;
-    private boolean selectingReplacement = false;
     private final Map<String, Image> cardImagesCache = new HashMap<>();
+    private final Map<String, List<Card>> renderedHands = new HashMap<>();
     private final int npcReactionTimeRange;
     private int availableSpoons;  // Track the number of available spoons
+    private Card pendingDrawCard;
+    private Card renderedPendingCard;
+    private Card renderedSelectedCard;
+    private boolean renderedCheatMode;
 
     private static final int CARD_WIDTH = 70;
     private static final int CARD_HEIGHT = 100;
@@ -74,7 +85,15 @@ public class GameUI {
         hintLabel.setWrapText(true);
         hintLabel.setMaxWidth(520);
 
-        headerBox.getChildren().addAll(titleLabel, turnLabel, hintLabel);
+        pendingCardLabel = new Label("No pending draw");
+        pendingCardLabel.getStyleClass().add("mini-label");
+
+        pendingCardSlot = new StackPane();
+        pendingCardSlot.getStyleClass().add("pending-card-slot");
+        pendingCardSlot.setMinSize(CARD_WIDTH + 28, CARD_HEIGHT + 28);
+        pendingCardSlot.setPrefSize(CARD_WIDTH + 28, CARD_HEIGHT + 28);
+
+        headerBox.getChildren().addAll(titleLabel, turnLabel, hintLabel, pendingCardLabel, pendingCardSlot);
 
         StackPane gameBoard = new StackPane();
         gameBoard.setAlignment(Pos.CENTER);
@@ -90,6 +109,7 @@ public class GameUI {
             spoonImage.setFitHeight(50);
             spoonImage.setFitWidth(50);
             spoonImage.getStyleClass().add("spoon-icon");
+            spoonImage.setOnMouseClicked(e -> pickSpoon());
             spoonsBox.getChildren().add(spoonImage);
         }
 
@@ -145,17 +165,8 @@ public class GameUI {
         Button pickSpoonButton = createActionButton("Grab Spoon", "accent-button");
         pickSpoonButton.setOnAction(e -> pickSpoon());
 
-        Button selectCardButton = createActionButton("Choose Replace", "secondary-button");
-        selectCardButton.setOnAction(e -> {
-            if (currentPlayer.getName().equals("Player 1")) {
-                showReplacementMenu();
-            } else {
-                showAlert("Not Your Turn", "It's not your turn.");
-            }
-        });
-
-        Button confirmReplaceButton = createActionButton("Confirm Replace", "secondary-button");
-        confirmReplaceButton.setOnAction(e -> confirmReplaceCard());
+        Button discardButton = createActionButton("Discard Selected", "secondary-button");
+        discardButton.setOnAction(e -> confirmReplaceCard());
 
         Button cheatButton = createActionButton("Cheat View", "ghost-button");
         cheatButton.setOnAction(e -> toggleCheatMode());
@@ -163,7 +174,7 @@ public class GameUI {
         Button pauseButton = createActionButton("Pause", "ghost-button");
         pauseButton.setOnAction(e -> showPauseMenu());
 
-        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, selectCardButton, confirmReplaceButton, cheatButton, pauseButton);
+        buttonsBox.getChildren().addAll(drawCardButton, pickSpoonButton, discardButton, cheatButton, pauseButton);
         root.getChildren().addAll(headerBox, board, buttonsBox);
 
         startExecutor();
@@ -190,27 +201,34 @@ public class GameUI {
         if (game.isGameOver()) return;
 
         if (currentPlayer.getName().equals("Player 1")) {
-            if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
-                Card drawnCard = game.getDeck().drawCard();
-                if (drawnCard != null) {
-                    if (currentPlayer.getHand().size() < 4) {
-                        currentPlayer.addCard(drawnCard);
-                    } else {
-                        selectedCard = drawnCard;
-                    }
-                    Platform.runLater(this::updateUI);
-                    game.checkForMatchAndSpoon(currentPlayer);
+            if (pendingDrawCard != null) {
+                showAlert("Finish Your Turn", "Discard one of your current cards before drawing again.");
+                return;
+            }
 
-                    // Move to next player
-                    game.nextTurn();
-                    currentPlayer = game.getCurrentPlayer();
-                    turnLabel.setText("Turn: " + currentPlayer.getName());
-                    if (!currentPlayer.getName().equals("Player 1")) {
-                        npcTurn();
-                    }
-                } else {
-                    endGame();
+            Card drawnCard = game.getDeck().drawCard();
+            if (drawnCard == null) {
+                endGame();
+                return;
+            }
+
+            if (!game.isInitialDrawComplete() || currentPlayer.getHand().size() < 4) {
+                currentPlayer.addCard(drawnCard);
+                animateCardToHand(drawnCard);
+                game.checkForMatchAndSpoon(currentPlayer);
+
+                game.nextTurn();
+                currentPlayer = game.getCurrentPlayer();
+                turnLabel.setText("Turn: " + currentPlayer.getName());
+                if (!currentPlayer.getName().equals("Player 1")) {
+                    npcTurn();
                 }
+            } else {
+                pendingDrawCard = drawnCard;
+                selectedCard = null;
+                updatePendingCardPreview();
+                animatePendingCardArrival();
+                hintLabel.setText("You drew a card. Click one of your four cards, then press Discard Selected.");
             }
         } else {
             showAlert("Not Your Turn", "Please wait for your turn to draw a card.");
@@ -218,8 +236,9 @@ public class GameUI {
     }
 
     private VBox createPlayerBox(Player player) {
-        VBox playerBox = new VBox(8);
+        VBox playerBox = new VBox(player.getName().equals("Player 1") ? 10 : 16);
         playerBox.setAlignment(Pos.CENTER);
+        playerBox.setPadding(new Insets(8));
         playerBox.getStyleClass().add(player.getName().equals("Player 1") ? "player-panel-self" : "player-panel");
         playerBox.setPrefWidth(player.getName().equals("Player 1") ? 540 : 190);
 
@@ -268,16 +287,17 @@ public class GameUI {
     }
 
     private void confirmReplaceCard() {
-        System.out.println("Confirming replacement. Selected card: " + selectedCard);
-        if (selectedCard != null && currentPlayer.getName().equals("Player 1")) {
-            System.out.println("Replacing card: " + selectedCard);
+        System.out.println("Confirming discard. Selected card: " + selectedCard);
+        if (pendingDrawCard != null && selectedCard != null && currentPlayer.getName().equals("Player 1")) {
+            System.out.println("Discarding card: " + selectedCard);
             currentPlayer.getHand().remove(selectedCard);
-            Card newCard = game.getDeck().drawCard();
-            currentPlayer.addCard(newCard);
-            Platform.runLater(this::updateUI);
+            currentPlayer.addCard(pendingDrawCard);
+            animateCardToHand(pendingDrawCard);
             selectedCard = null;
-            selectingReplacement = false;
-            System.out.println("Card replaced successfully.");
+            pendingDrawCard = null;
+            updatePendingCardPreview();
+            System.out.println("Card discarded successfully.");
+            game.checkForMatchAndSpoon(currentPlayer);
             game.nextTurn();
             currentPlayer = game.getCurrentPlayer();
             turnLabel.setText("Turn: " + currentPlayer.getName());
@@ -285,8 +305,8 @@ public class GameUI {
                 npcTurn();
             }
         } else {
-            System.out.println("No card selected or it's not your turn.");
-            showAlert("Replace Card", "No card selected or it's not your turn.");
+            System.out.println("No card selected, no pending draw, or it's not your turn.");
+            showAlert("Discard Card", "Draw a fifth card first, then select one of your hand cards to discard.");
         }
     }
 
@@ -299,26 +319,54 @@ public class GameUI {
         for (int i = 0; i < game.getPlayers().size(); i++) {
             Player player = game.getPlayers().get(i);
             HBox handBox = playerHands.get(i);
-            handBox.getChildren().clear();
-            for (int j = 0; j < player.getHand().size(); j++) {
-                Card card = player.getHand().get(j);
-                ImageView cardImage;
-                if (cheatMode || player.getName().equals("Player 1")) {
-                    cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
-                } else {
-                    cardImage = new ImageView(loadImage("file:src/images/card_back.png"));
+            List<Card> currentHand = new ArrayList<>(player.getHand());
+            List<Card> renderedHand = renderedHands.get(player.getName());
+            boolean needsHandRefresh = !currentHand.equals(renderedHand)
+                || renderedCheatMode != cheatMode
+                || (player.getName().equals("Player 1") && !Objects.equals(renderedSelectedCard, selectedCard));
+
+            if (needsHandRefresh) {
+                handBox.getChildren().clear();
+                for (Card card : player.getHand()) {
+                    ImageView cardImage;
+                    if (cheatMode || player.getName().equals("Player 1")) {
+                        cardImage = new ImageView(loadImage("file:src/images/cards/" + card.toString() + ".png"));
+                    } else {
+                        cardImage = new ImageView(loadImage("file:src/images/card_back.png"));
+                    }
+                    cardImage.setFitHeight(CARD_HEIGHT);
+                    cardImage.setFitWidth(CARD_WIDTH);
+                    cardImage.getStyleClass().add("play-card");
+                    if (player.getName().equals("Player 1")) {
+                        Card handCard = card;
+                        cardImage.setOnMouseClicked(e -> {
+                            if (pendingDrawCard == null) {
+                                hintLabel.setText("Draw a card first. Then choose one card to discard.");
+                                return;
+                            }
+                            selectedCard = handCard;
+                            updateUI();
+                            hintLabel.setText("Selected " + handCard.getValue() + " of " + handCard.getSuit() + ". Press Discard Selected to finish your turn.");
+                        });
+                        if (selectedCard != null && selectedCard.equals(handCard)) {
+                            cardImage.getStyleClass().add("selected-card");
+                        }
+                    }
+                    handBox.getChildren().add(cardImage);
                 }
-                cardImage.setFitHeight(CARD_HEIGHT);
-                cardImage.setFitWidth(CARD_WIDTH);
-                cardImage.getStyleClass().add("play-card");
-                handBox.getChildren().add(cardImage);
+                renderedHands.put(player.getName(), currentHand);
             }
             playerSpoons.get(i).setVisible(player.hasSpoon());
         }
+        renderedCheatMode = cheatMode;
+        renderedSelectedCard = selectedCard;
         turnLabel.setText("Turn: " + game.getCurrentPlayer().getName());
-        hintLabel.setText(game.isRaceStarted()
-            ? "Spoon race active. Grab one now."
-            : "Collect four cards of the same rank, then grab a spoon.");
+        if (game.isRaceStarted()) {
+            hintLabel.setText("Spoon race active. Tap the spoon button or the spoon pile now.");
+        } else if (pendingDrawCard == null && selectedCard == null) {
+            hintLabel.setText("Collect four cards of the same rank, then grab a spoon.");
+        }
+        updatePendingCardPreview();
     }
 
     private void startExecutor() {
@@ -588,39 +636,96 @@ public class GameUI {
                 .orElse(player.getHand().get(0));
     }
 
-    private void showReplacementMenu() {
-        Stage dialog = new Stage();
-        VBox dialogVbox = new VBox(20);
-        dialogVbox.setAlignment(Pos.CENTER);
-
-        Label instructions = new Label("Select the card you want to replace:");
-        dialogVbox.getChildren().add(instructions);
-
-        HBox cardsBox = new HBox(10);
-        cardsBox.setAlignment(Pos.CENTER);
-        Player player1 = game.getPlayers().get(0);
-        for (Card card : player1.getHand()) {
-            ImageView cardImageView = createCardImageView(card);
-            cardsBox.getChildren().add(cardImageView);
-        }
-        dialogVbox.getChildren().add(cardsBox);
-
-        Button confirmButton = new Button("Confirm Replace");
-        confirmButton.setOnAction(e -> {
-            confirmReplaceCard();
-            dialog.close();
-        });
-        dialogVbox.getChildren().add(confirmButton);
-
-        Scene dialogScene = new Scene(dialogVbox, 400, 300);
-        dialog.setScene(dialogScene);
-        dialog.show();
-    }
-
     private Button createActionButton(String text, String styleClass) {
         Button button = new Button(text);
         button.getStyleClass().add(styleClass);
         return button;
+    }
+
+    private void updatePendingCardPreview() {
+        if (pendingDrawCard == null) {
+            pendingCardSlot.getChildren().clear();
+            pendingCardView = null;
+            renderedPendingCard = null;
+            pendingCardLabel.setText("No pending draw");
+            return;
+        }
+
+        if (pendingDrawCard.equals(renderedPendingCard) && pendingCardView != null) {
+            pendingCardLabel.setText("New draw");
+            return;
+        }
+
+        pendingCardSlot.getChildren().clear();
+        pendingCardLabel.setText("New draw");
+        pendingCardView = new ImageView(loadImage("file:src/images/cards/" + pendingDrawCard.toString() + ".png"));
+        pendingCardView.setFitWidth(CARD_WIDTH);
+        pendingCardView.setFitHeight(CARD_HEIGHT);
+        pendingCardView.getStyleClass().add("play-card");
+        pendingCardSlot.getChildren().add(pendingCardView);
+        renderedPendingCard = pendingDrawCard;
+    }
+
+    private void animatePendingCardArrival() {
+        if (pendingCardView == null) {
+            return;
+        }
+
+        pendingCardView.setTranslateY(-90);
+        pendingCardView.setScaleX(0.65);
+        pendingCardView.setScaleY(0.65);
+        pendingCardView.setOpacity(0.0);
+
+        TranslateTransition move = new TranslateTransition(Duration.millis(900), pendingCardView);
+        move.setFromY(-90);
+        move.setToY(0);
+
+        ScaleTransition scale = new ScaleTransition(Duration.millis(900), pendingCardView);
+        scale.setFromX(0.65);
+        scale.setFromY(0.65);
+        scale.setToX(1.0);
+        scale.setToY(1.0);
+
+        FadeTransition fade = new FadeTransition(Duration.millis(900), pendingCardView);
+        fade.setFromValue(0.0);
+        fade.setToValue(1.0);
+
+        new ParallelTransition(move, scale, fade).play();
+    }
+
+    private void animateCardToHand(Card drawnCard) {
+        hintLabel.setText("Drew " + drawnCard.getValue() + " of " + drawnCard.getSuit() + ".");
+        Platform.runLater(() -> {
+            updateUI();
+            if (playerHands.isEmpty()) {
+                return;
+            }
+            HBox handBox = playerHands.get(0);
+            if (handBox.getChildren().isEmpty()) {
+                return;
+            }
+            javafx.scene.Node latestCard = handBox.getChildren().get(handBox.getChildren().size() - 1);
+            latestCard.setTranslateY(70);
+            latestCard.setScaleX(0.75);
+            latestCard.setScaleY(0.75);
+            latestCard.setOpacity(0.0);
+
+            TranslateTransition move = new TranslateTransition(Duration.millis(950), latestCard);
+            move.setFromY(70);
+            move.setToY(0);
+
+            ScaleTransition scale = new ScaleTransition(Duration.millis(950), latestCard);
+            scale.setFromX(0.75);
+            scale.setFromY(0.75);
+            scale.setToX(1.0);
+            scale.setToY(1.0);
+
+            FadeTransition fade = new FadeTransition(Duration.millis(950), latestCard);
+            fade.setFromValue(0.0);
+            fade.setToValue(1.0);
+
+            new ParallelTransition(move, scale, fade).play();
+        });
     }
 
     // Method to load images and cache them
