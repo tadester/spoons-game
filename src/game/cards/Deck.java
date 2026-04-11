@@ -27,4 +27,13 @@ public class Deck {
     public Card drawCard() {
         return cards.isEmpty() ? null : cards.remove(cards.size() - 1);
     }
+
+    public void replenish(List<Card> extraCards) {
+        cards.addAll(extraCards);
+        Collections.shuffle(cards);
+    }
+
+    public int size() {
+        return cards.size();
+    }
 }
