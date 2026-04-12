@@ -166,7 +166,9 @@
 }
 
 .table-board {
-    -fx-background-color: linear-gradient(to bottom, rgba(17, 124, 117, 0.22), rgba(17, 73, 78, 0.18));
+    -fx-background-color:
+        radial-gradient(center 50% 18%, radius 90%, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.05) 42%, rgba(255,255,255,0) 70%),
+        linear-gradient(to bottom, rgba(17, 124, 117, 0.18), rgba(17, 73, 78, 0.14));
     -fx-background-radius: 40;
     -fx-border-color: rgba(255, 255, 255, 0.22);
     -fx-border-radius: 40;
@@ -175,8 +177,8 @@
 }
 
 .table-core {
-    -fx-min-width: 540;
-    -fx-min-height: 400;
+    -fx-min-width: 680;
+    -fx-min-height: 470;
     -fx-background-color: radial-gradient(center 50% 50%, radius 75%, #8bf06f 0%, #38bf78 44%, #156f58 100%);
     -fx-background-radius: 999;
     -fx-border-color: rgba(255, 250, 196, 0.52);
@@ -218,20 +220,21 @@
 }
 
 .player-panel {
-    -fx-background-color: rgba(248, 253, 255, 0.9);
-    -fx-background-radius: 26;
-    -fx-padding: 16;
-    -fx-border-color: rgba(255, 255, 255, 0.42);
+    -fx-background-color: rgba(248, 253, 255, 0.74);
+    -fx-background-radius: 22;
+    -fx-padding: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.36);
     -fx-border-radius: 26;
+    -fx-effect: dropshadow(gaussian, rgba(13, 59, 69, 0.14), 16, 0.16, 0, 5);
 }
 
 .player-panel-self {
-    -fx-background-color: rgba(248, 253, 255, 0.97);
-    -fx-background-radius: 28;
-    -fx-padding: 18;
-    -fx-border-color: rgba(255, 219, 115, 0.48);
-    -fx-border-radius: 28;
-    -fx-effect: dropshadow(gaussian, rgba(17, 69, 82, 0.18), 20, 0.14, 0, 6);
+    -fx-background-color: rgba(248, 253, 255, 0.88);
+    -fx-background-radius: 30;
+    -fx-padding: 12 16 12 16;
+    -fx-border-color: rgba(255, 219, 115, 0.42);
+    -fx-border-radius: 30;
+    -fx-effect: dropshadow(gaussian, rgba(17, 69, 82, 0.2), 22, 0.16, 0, 7);
 }
 
 .player-name {
@@ -253,14 +256,14 @@
 }
 
 .player-hand {
-    -fx-padding: 6;
+    -fx-padding: 2;
     -fx-alignment: center;
     -fx-spacing: -42;
 }
 
 .seat-hand-left,
 .seat-hand-right {
-    -fx-spacing: -58;
+    -fx-spacing: -48;
 }
 
 .seat-hand-top {
@@ -268,16 +271,26 @@
 }
 
 .seat-bottom {
-    -fx-translate-y: 10;
+    -fx-translate-y: 4;
 }
 
 .seat-top {
-    -fx-translate-y: -4;
+    -fx-translate-y: -2;
 }
 
 .seat-left,
 .seat-right {
-    -fx-padding: 10 6 10 6;
+    -fx-padding: 6;
+}
+
+.seat-bottom.player-panel-self {
+    -fx-background-color: rgba(248, 253, 255, 0.82);
+}
+
+.seat-top.player-panel,
+.seat-left.player-panel,
+.seat-right.player-panel {
+    -fx-background-color: rgba(248, 253, 255, 0.64);
 }
 
 .controls-bar {
@@ -315,15 +328,17 @@
     -fx-background-color:
         radial-gradient(center 35% 35%, radius 65%, #ffe06c 0%, #ff8a26 55%, #db2d10 100%);
     -fx-text-fill: white;
-    -fx-font-size: 18px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
-    -fx-padding: 12 22 12 22;
+    -fx-padding: 16 24 16 24;
     -fx-background-radius: 999;
     -fx-border-color: #fff0a2;
     -fx-border-width: 3;
     -fx-border-radius: 999;
     -fx-rotate: -12;
     -fx-effect: dropshadow(gaussian, rgba(109, 18, 6, 0.45), 18, 0.3, 0, 8);
+    -fx-min-width: 170;
+    -fx-min-height: 74;
 }
 
 .spoon-call-button:hover {

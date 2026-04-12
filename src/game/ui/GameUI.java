@@ -19,7 +19,6 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -50,7 +49,7 @@ public class GameUI {
     private final Random random;
 
     private StackPane root;
-    private BorderPane boardPane;
+    private StackPane boardPane;
     private Pane animationLayer;
     private Label titleLabel;
     private Label statusLabel;
@@ -106,7 +105,7 @@ public class GameUI {
 
         headerPanel.getChildren().addAll(titleLabel, statusLabel, hintLabel);
 
-        boardPane = new BorderPane();
+        boardPane = new StackPane();
         boardPane.getStyleClass().add("table-board");
         boardPane.setPadding(new Insets(24));
 
@@ -365,24 +364,36 @@ public class GameUI {
 
     private void updateUI() {
         drawTargets.clear();
-        boardPane.setTop(null);
-        boardPane.setLeft(null);
-        boardPane.setRight(null);
-        boardPane.setBottom(null);
-        boardPane.setCenter(createCenterArena());
+        boardPane.getChildren().clear();
+
+        Node centerArena = createCenterArena();
+        StackPane.setAlignment(centerArena, Pos.CENTER);
+        boardPane.getChildren().add(centerArena);
 
         List<Player> players = engine.getPlayers();
         if (!players.isEmpty()) {
-            boardPane.setBottom(createPlayerPanel(players.get(0), 0, SeatPosition.BOTTOM, true));
+            Node panel = createPlayerPanel(players.get(0), 0, SeatPosition.BOTTOM, true);
+            StackPane.setAlignment(panel, Pos.BOTTOM_CENTER);
+            StackPane.setMargin(panel, new Insets(0, 0, 24, 0));
+            boardPane.getChildren().add(panel);
         }
         if (players.size() > 1) {
-            boardPane.setLeft(createPlayerPanel(players.get(1), 1, SeatPosition.LEFT, false));
+            Node panel = createPlayerPanel(players.get(1), 1, SeatPosition.LEFT, false);
+            StackPane.setAlignment(panel, Pos.CENTER_LEFT);
+            StackPane.setMargin(panel, new Insets(0, 0, 0, 22));
+            boardPane.getChildren().add(panel);
         }
         if (players.size() > 2) {
-            boardPane.setTop(createPlayerPanel(players.get(2), 2, SeatPosition.TOP, false));
+            Node panel = createPlayerPanel(players.get(2), 2, SeatPosition.TOP, false);
+            StackPane.setAlignment(panel, Pos.TOP_CENTER);
+            StackPane.setMargin(panel, new Insets(20, 0, 0, 0));
+            boardPane.getChildren().add(panel);
         }
         if (players.size() > 3) {
-            boardPane.setRight(createPlayerPanel(players.get(3), 3, SeatPosition.RIGHT, false));
+            Node panel = createPlayerPanel(players.get(3), 3, SeatPosition.RIGHT, false);
+            StackPane.setAlignment(panel, Pos.CENTER_RIGHT);
+            StackPane.setMargin(panel, new Insets(0, 22, 0, 0));
+            boardPane.getChildren().add(panel);
         }
 
         updateStatusText();
@@ -435,6 +446,7 @@ public class GameUI {
         StackPane.setMargin(spoonButton, new Insets(0, 8, 18, 0));
 
         StackPane arena = new StackPane(tableCore, spoonButton);
+        arena.setPickOnBounds(false);
         centerBox.getChildren().add(arena);
         return centerBox;
     }
@@ -445,7 +457,8 @@ public class GameUI {
         panel.getStyleClass().add(human ? "player-panel-self" : "player-panel");
         panel.getStyleClass().add("seat-" + seatPosition.name().toLowerCase());
         panel.setPadding(new Insets(14));
-        panel.setMaxWidth(human ? 760 : 240);
+        panel.setMaxWidth(human ? 820 : 210);
+        panel.setFillWidth(false);
 
         Label nameLabel = new Label(player.getName());
         nameLabel.getStyleClass().add("player-name");
@@ -453,7 +466,7 @@ public class GameUI {
         Label lettersLabel = new Label(player.getLetterProgress().isEmpty() ? "Clean" : player.getLetterProgress());
         lettersLabel.getStyleClass().add("letters-chip");
 
-        HBox cardsRow = new HBox(10);
+        HBox cardsRow = new HBox(human ? 10 : 6);
         cardsRow.setAlignment(Pos.CENTER);
         cardsRow.getStyleClass().add("player-hand");
         cardsRow.getStyleClass().add("seat-hand-" + seatPosition.name().toLowerCase());
@@ -461,7 +474,7 @@ public class GameUI {
         boolean cardsFaceUp = human;
 
         for (Card card : player.getHand()) {
-            ImageView cardView = createCardView(card, cardsFaceUp);
+            ImageView cardView = createCardView(card, cardsFaceUp, human);
             if (human && engine.getPendingDraw() != null) {
                 cardView.setOnMouseClicked(event -> {
                     selectedDiscard = card;
@@ -492,7 +505,7 @@ public class GameUI {
             pendingLabel.getStyleClass().add("mini-label");
 
             if (engine.getPendingDraw() != null) {
-                ImageView pendingView = createCardView(engine.getPendingDraw(), true);
+                ImageView pendingView = createCardView(engine.getPendingDraw(), true, true);
                 pendingView.setOnMouseClicked(event -> {
                     selectedDiscard = engine.getPendingDraw();
                     updateActionState();
@@ -505,7 +518,9 @@ public class GameUI {
                 pendingCardSlot.getChildren().add(pendingView);
             }
 
-            HBox lowerRow = new HBox(16, cardsRow, new VBox(8, pendingLabel, pendingCardSlot));
+            VBox pendingBox = new VBox(8, pendingLabel, pendingCardSlot);
+            pendingBox.setAlignment(Pos.CENTER);
+            HBox lowerRow = new HBox(18, cardsRow, pendingBox);
             lowerRow.setAlignment(Pos.CENTER);
             panel.getChildren().addAll(nameLabel, lettersLabel, lowerRow, targetAnchor);
         } else {
@@ -524,10 +539,10 @@ public class GameUI {
         return panel;
     }
 
-    private ImageView createCardView(Card card, boolean faceUp) {
+    private ImageView createCardView(Card card, boolean faceUp, boolean human) {
         ImageView cardView = new ImageView(faceUp ? loadCardImage(card) : loadImage("file:src/images/card_back.png"));
-        cardView.setFitWidth(CARD_WIDTH);
-        cardView.setFitHeight(CARD_HEIGHT);
+        cardView.setFitWidth(human ? CARD_WIDTH : CARD_WIDTH * 0.74);
+        cardView.setFitHeight(human ? CARD_HEIGHT : CARD_HEIGHT * 0.74);
         cardView.getStyleClass().add("play-card");
         return cardView;
     }
