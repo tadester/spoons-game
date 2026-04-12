@@ -64,6 +64,13 @@ public class GameUI {
     private Card selectedDiscard;
     private boolean animating;
 
+    private enum SeatPosition {
+        BOTTOM,
+        LEFT,
+        TOP,
+        RIGHT
+    }
+
     public GameUI(Stage primaryStage, int npcReactionTimeRange) {
         this.primaryStage = primaryStage;
         this.npcDelaySeconds = Math.max(0.75, npcReactionTimeRange * 0.6);
@@ -129,7 +136,7 @@ public class GameUI {
         menuButton.getStyleClass().add("ghost-button");
         menuButton.setOnAction(e -> showPauseMenu());
 
-        actionsBar.getChildren().addAll(drawButton, discardButton, spoonButton, menuButton);
+        actionsBar.getChildren().addAll(drawButton, discardButton, menuButton);
 
         screen.getChildren().addAll(headerPanel, boardStack, actionsBar);
         root.getChildren().add(screen);
@@ -366,16 +373,16 @@ public class GameUI {
 
         List<Player> players = engine.getPlayers();
         if (!players.isEmpty()) {
-            boardPane.setBottom(createPlayerPanel(players.get(0), 0, true));
+            boardPane.setBottom(createPlayerPanel(players.get(0), 0, SeatPosition.BOTTOM, true));
         }
         if (players.size() > 1) {
-            boardPane.setTop(createPlayerPanel(players.get(1), 1, false));
+            boardPane.setLeft(createPlayerPanel(players.get(1), 1, SeatPosition.LEFT, false));
         }
         if (players.size() > 2) {
-            boardPane.setLeft(createPlayerPanel(players.get(2), 2, false));
+            boardPane.setTop(createPlayerPanel(players.get(2), 2, SeatPosition.TOP, false));
         }
         if (players.size() > 3) {
-            boardPane.setRight(createPlayerPanel(players.get(3), 3, false));
+            boardPane.setRight(createPlayerPanel(players.get(3), 3, SeatPosition.RIGHT, false));
         }
 
         updateStatusText();
@@ -421,16 +428,24 @@ public class GameUI {
         centerContent.getChildren().addAll(deckLabel, deckImage, spoonLabel, spoonPile);
         tableCore.getChildren().add(centerContent);
 
-        centerBox.getChildren().add(tableCore);
+        if (!spoonButton.getStyleClass().contains("spoon-call-button")) {
+            spoonButton.getStyleClass().add("spoon-call-button");
+        }
+        StackPane.setAlignment(spoonButton, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(spoonButton, new Insets(0, 8, 18, 0));
+
+        StackPane arena = new StackPane(tableCore, spoonButton);
+        centerBox.getChildren().add(arena);
         return centerBox;
     }
 
-    private VBox createPlayerPanel(Player player, int playerIndex, boolean human) {
+    private VBox createPlayerPanel(Player player, int playerIndex, SeatPosition seatPosition, boolean human) {
         VBox panel = new VBox(12);
         panel.setAlignment(Pos.CENTER);
         panel.getStyleClass().add(human ? "player-panel-self" : "player-panel");
+        panel.getStyleClass().add("seat-" + seatPosition.name().toLowerCase());
         panel.setPadding(new Insets(14));
-        panel.setMaxWidth(human ? 620 : 220);
+        panel.setMaxWidth(human ? 760 : 240);
 
         Label nameLabel = new Label(player.getName());
         nameLabel.getStyleClass().add("player-name");
@@ -441,9 +456,12 @@ public class GameUI {
         HBox cardsRow = new HBox(10);
         cardsRow.setAlignment(Pos.CENTER);
         cardsRow.getStyleClass().add("player-hand");
+        cardsRow.getStyleClass().add("seat-hand-" + seatPosition.name().toLowerCase());
+
+        boolean cardsFaceUp = human;
 
         for (Card card : player.getHand()) {
-            ImageView cardView = createCardView(card, human);
+            ImageView cardView = createCardView(card, cardsFaceUp);
             if (human && engine.getPendingDraw() != null) {
                 cardView.setOnMouseClicked(event -> {
                     selectedDiscard = card;
@@ -492,6 +510,15 @@ public class GameUI {
             panel.getChildren().addAll(nameLabel, lettersLabel, lowerRow, targetAnchor);
         } else {
             panel.getChildren().addAll(nameLabel, lettersLabel, cardsRow, targetAnchor);
+        }
+
+        if (seatPosition == SeatPosition.LEFT || seatPosition == SeatPosition.RIGHT) {
+            cardsRow.setRotate(seatPosition == SeatPosition.LEFT ? 90 : -90);
+            panel.setPrefWidth(220);
+        }
+
+        if (seatPosition == SeatPosition.TOP) {
+            cardsRow.setRotate(180);
         }
 
         return panel;

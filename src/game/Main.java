@@ -11,6 +11,7 @@ public class Main extends Application {
         MenuUI menuUI = new MenuUI(primaryStage);
         primaryStage.setScene(SceneFactory.createScene(menuUI.createContent()));
         primaryStage.setTitle("Spoons Game");
+        primaryStage.setMaximized(true);
         primaryStage.show();
     }
 
